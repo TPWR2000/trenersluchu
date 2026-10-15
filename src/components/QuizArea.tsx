@@ -1,13 +1,43 @@
-import { DIRECTION_SOURCE_LABELS, RESOLVED_DIRECTION_LABELS } from '../data/directions'
 import { INTERVALS } from '../data/intervals'
 import type { Feedback, Question, SessionConfig } from '../types'
 
-const pluralizeIntervals = (count: number) => {
-  if (count === 1) return 'interwał'
-  const lastTwo = count % 100
-  const last = count % 10
-  if (last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return 'interwały'
-  return 'interwałów'
+function SpeakerIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M11 5 6 9H2v6h4l5 4V5Z" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+      <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+    </svg>
+  )
+}
+
+function RepeatIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M17 2l4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+      <path d="M7 22l-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+    </svg>
+  )
 }
 
 interface QuizAreaProps {
@@ -21,6 +51,7 @@ interface QuizAreaProps {
   timeLeft: number
   onAnswer: (semitones: number) => void
   onRepeat: () => void
+  onQuit: () => void
 }
 
 export function QuizArea({
@@ -34,13 +65,16 @@ export function QuizArea({
   timeLeft,
   onAnswer,
   onRepeat,
+  onQuit,
 }: QuizAreaProps) {
   const locked = feedback !== null
   const isTimeMode = config.mode === 'time'
   const secondsLeft = Math.ceil(timeLeft / 1000)
-  const counterLabel = isTimeMode
+  const counterValue = isTimeMode
     ? `${secondsLeft}s`
-    : `Pytanie ${Math.min(answered + 1, config.count)} / ${config.count}`
+    : `${Math.min(answered + (locked ? 0 : 1), config.count)}/${config.count}`
+  const counterLabel = isTimeMode ? 'Czas' : 'Zadanie'
+  const urgent = isTimeMode && secondsLeft <= 10
 
   const answerClass = (semitones: number) => {
     if (feedback && feedback.chosen === semitones) {
@@ -51,70 +85,92 @@ export function QuizArea({
     if (feedback && !feedback.correct && semitones === question?.semitones) {
       return 'border-mt-success bg-mt-success/10 text-mt-success'
     }
-    return 'border-mt-sub/40 text-mt-text hover:border-mt-accent hover:text-mt-accent'
+    return 'border-mt-sub/40 text-mt-text hover:border-mt-accent hover:text-mt-accent active:bg-mt-accent/10'
   }
 
+  const activeIntervals = INTERVALS.filter((interval) => selected.includes(interval.semitones))
+  const gridCols =
+    activeIntervals.length <= 4
+      ? 'grid-cols-2'
+      : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
+
+  const replayDisabled = locked || !question
+
   return (
-    <section className="flex flex-col gap-8">
-      <div className="flex items-center justify-between text-sm">
-        <span className="uppercase tracking-[0.2em] text-mt-sub">
-          {isTimeMode ? 'Czas' : 'Zadania'}
-        </span>
-        <span
-          className={[
-            'text-4xl font-bold tabular-nums',
-            isTimeMode && secondsLeft <= 10 ? 'text-mt-error' : 'text-mt-text',
-          ].join(' ')}
-        >
-          {counterLabel}
-        </span>
-        <span className="tabular-nums text-mt-sub">
-          <span className="text-mt-success">{correct}</span>
-          <span className="px-1 opacity-50">/</span>
-          <span className="text-mt-error">{wrong}</span>
-        </span>
-      </div>
+    <section className="flex min-h-dvh w-full flex-col px-4 pb-4 pt-5 sm:px-6 sm:pb-6">
+      <header className="mx-auto flex w-full max-w-2xl items-start justify-between gap-3">
+        <div className="flex flex-col">
+          <span className="text-xs uppercase tracking-[0.2em] text-mt-sub">{counterLabel}</span>
+          <span
+            className={[
+              'text-5xl font-bold tabular-nums leading-none sm:text-6xl',
+              urgent ? 'text-mt-error' : 'text-mt-text',
+            ].join(' ')}
+          >
+            {counterValue}
+          </span>
+        </div>
 
-      <div className="flex flex-col items-center gap-4 rounded border border-mt-sub/25 bg-mt-sub-alt px-6 py-8">
-        <span className="text-xs uppercase tracking-[0.3em] text-mt-sub">
-          {locked ? feedback?.correct ? 'Trafiłeś' : 'Pudło' : 'Słuchaj…'}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="tabular-nums text-sm">
+            <span className="text-mt-success">{correct}</span>
+            <span className="px-1 opacity-50">/</span>
+            <span className="text-mt-error">{wrong}</span>
+          </span>
+          <button
+            type="button"
+            onClick={onQuit}
+            aria-label="Anuluj sesję"
+            title="Anuluj sesję"
+            className="flex h-11 w-11 touch-manipulation items-center justify-center rounded border border-mt-sub/40 text-lg text-mt-sub transition-colors duration-150 hover:border-mt-error/70 hover:text-mt-error active:scale-95"
+          >
+            ✕
+          </button>
+        </div>
+      </header>
 
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 py-6">
         <button
           type="button"
           onClick={onRepeat}
-          disabled={locked || !question}
+          disabled={replayDisabled}
+          aria-label="Odtwórz ponownie"
           className={[
-            'flex items-center gap-3 rounded px-8 py-4 text-lg font-bold uppercase tracking-widest transition-colors duration-150',
-            locked || !question
+            'flex h-28 w-28 touch-manipulation items-center justify-center rounded-full transition-transform duration-150 sm:h-32 sm:w-32',
+            replayDisabled
               ? 'cursor-not-allowed bg-mt-sub/20 text-mt-sub'
-              : 'bg-mt-accent text-mt-bg hover:bg-mt-accent/85',
+              : 'bg-mt-accent text-mt-bg hover:bg-mt-accent/85 active:scale-95',
           ].join(' ')}
         >
-          <span aria-hidden="true">↻</span>
-          Powtórz dźwięk
+          <SpeakerIcon className="h-14 w-14 sm:h-16 sm:w-16" />
         </button>
 
-        <p className="text-xs text-mt-sub">
-          {question && (
-            <>
-              Kierunek: {RESOLVED_DIRECTION_LABELS[question.direction].toLowerCase()} (
-              {DIRECTION_SOURCE_LABELS[question.directionSource].toLowerCase()}) ·{' '}
-            </>
-          )}
-          {selected.length} {pluralizeIntervals(selected.length)} w grze
-        </p>
+        <span className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-mt-sub">
+          <RepeatIcon className="h-4 w-4" />
+          Odtwórz ponownie
+        </span>
+
+        {locked && (
+          <span
+            className={[
+              'text-xs uppercase tracking-[0.3em]',
+              feedback?.correct ? 'text-mt-success' : 'text-mt-error',
+            ].join(' ')}
+          >
+            {feedback?.correct ? 'Trafiłeś' : 'Pudło'}
+          </span>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-        {INTERVALS.filter((interval) => selected.includes(interval.semitones)).map((interval) => (
+      <div className={`mx-auto grid w-full max-w-2xl gap-2.5 ${gridCols}`}>
+        {activeIntervals.map((interval) => (
           <button
             key={interval.semitones}
             type="button"
             disabled={locked}
             onClick={() => onAnswer(interval.semitones)}
             className={[
-              'flex flex-col items-center gap-0.5 rounded border px-3 py-3 transition-colors duration-150 outline-none',
+              'flex min-h-12 touch-manipulation flex-col items-center justify-center gap-0.5 rounded border px-3 py-2 transition-colors duration-150 outline-none',
               locked ? 'cursor-not-allowed' : '',
               answerClass(interval.semitones),
             ].join(' ')}

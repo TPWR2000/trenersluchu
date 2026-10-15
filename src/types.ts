@@ -26,3 +26,19 @@ export interface Feedback {
   chosen: number
   correct: boolean
 }
+
+export interface TaskResult {
+  taskId: number
+  rootNote: string
+  targetNote: string
+  intervalName: string
+  userAnswer: string
+  isCorrect: boolean
+  playMode: string
+  notesToPlay: string[]
+  elapsedMs: number
+  rootMidi: number
+  semitones: number
+  direction: ResolvedDirection
+  directionSource: DirectionSource
+}

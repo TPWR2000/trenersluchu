@@ -8,7 +8,7 @@ const CATEGORIES = [
 ]
 
 const COUNT_OPTIONS = [10, 20, 50]
-const TIME_OPTIONS = [60]
+const TIME_OPTIONS = [15, 30, 60]
 
 interface TopBarProps {
   config: SessionConfig
@@ -31,30 +31,36 @@ export function TopBar({
 
   const chipClass = (active: boolean) =>
     [
-      'px-3 py-1 text-sm rounded transition-colors duration-150 outline-none',
+      'inline-flex min-h-11 items-center justify-center rounded px-4 text-sm transition-colors duration-150 outline-none',
       active
-        ? 'bg-mt-accent text-mt-bg font-bold'
-        : 'text-mt-sub hover:text-mt-text border border-mt-sub/40 hover:border-mt-text/60',
+        ? 'bg-mt-accent font-bold text-mt-bg'
+        : 'border border-mt-sub/40 text-mt-sub hover:border-mt-text/60 hover:text-mt-text',
       locked ? 'cursor-not-allowed opacity-50' : '',
     ]
       .filter(Boolean)
       .join(' ')
 
+  const groupClass = 'flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3'
+
   return (
-    <header className="flex flex-col items-center gap-5">
-      <div className="flex items-baseline gap-3">
-        <span className="text-2xl font-bold tracking-tight text-mt-accent">trener&nbsp;słuchu</span>
-        <span className="text-xs uppercase tracking-[0.3em] text-mt-sub">ear trainer</span>
+    <header className="flex flex-col items-center gap-6">
+      <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:items-baseline sm:gap-3">
+        <span className="text-xl font-bold tracking-tight text-mt-accent sm:text-2xl">
+          trener&nbsp;słuchu
+        </span>
+        <span className="text-[10px] uppercase tracking-[0.3em] text-mt-sub sm:text-xs">
+          ear trainer
+        </span>
       </div>
 
-      <nav className="flex flex-wrap items-center justify-center gap-6 text-sm">
+      <nav className="flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-1 text-sm">
         {CATEGORIES.map((category) => (
           <button
             key={category.label}
             type="button"
             disabled={!category.enabled || locked}
             className={[
-              'pb-1 transition-colors duration-150',
+              'min-h-11 px-1 pb-1 transition-colors duration-150',
               category.enabled
                 ? 'border-b-2 border-mt-accent text-mt-accent'
                 : 'cursor-not-allowed text-mt-sub/60',
@@ -65,10 +71,12 @@ export function TopBar({
         ))}
       </nav>
 
-      <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-mt-sub">Liczba zadań</span>
-          <div className="flex gap-2">
+      <div className="flex w-full flex-col items-center gap-4 text-sm">
+        <div className={groupClass}>
+          <span className="text-center text-xs uppercase tracking-wider text-mt-sub sm:text-sm sm:normal-case sm:tracking-normal">
+            Liczba zadań
+          </span>
+          <div className="flex justify-center gap-2">
             {COUNT_OPTIONS.map((count) => (
               <button
                 key={count}
@@ -83,9 +91,11 @@ export function TopBar({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-mt-sub">Czas</span>
-          <div className="flex gap-2">
+        <div className={groupClass}>
+          <span className="text-center text-xs uppercase tracking-wider text-mt-sub sm:text-sm sm:normal-case sm:tracking-normal">
+            Czas
+          </span>
+          <div className="flex justify-center gap-2">
             {TIME_OPTIONS.map((seconds) => (
               <button
                 key={seconds}
@@ -101,9 +111,11 @@ export function TopBar({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 text-sm">
-        <span className="text-mt-sub">Kierunek odtwarzania</span>
-        <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex w-full flex-col items-center gap-3 text-sm">
+        <span className="text-xs uppercase tracking-wider text-mt-sub sm:text-sm sm:normal-case sm:tracking-normal">
+          Kierunek odtwarzania
+        </span>
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-center">
           {DIRECTION_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -118,7 +130,7 @@ export function TopBar({
           ))}
         </div>
         {timeMode && (
-          <span className="text-xs text-mt-sub/70">
+          <span className="text-center text-xs text-mt-sub/70">
             zablokowane w trybie czasowym — zawsze harmonicznie
           </span>
         )}

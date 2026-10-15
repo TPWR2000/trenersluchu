@@ -37,6 +37,12 @@ export const RESOLVED_DIRECTION_LABELS: Record<ResolvedDirection, string> = {
   harmonic: 'Harmonicznie',
 }
 
+export const DIRECTION_GLYPHS: Record<ResolvedDirection, string> = {
+  up: '↑',
+  down: '↓',
+  harmonic: '♫',
+}
+
 export const DIRECTION_SOURCE_LABELS: Record<DirectionSource, string> = {
   random: 'Wylosowany',
   chosen: 'Wybrany',

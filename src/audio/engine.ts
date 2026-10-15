@@ -83,7 +83,7 @@ export async function ensureAudio(): Promise<void> {
   console.log(`[AudioEngine] Kontekst audio uruchomiony (stan: ${context.state}).`)
 }
 
-function midiToNote(midi: number): string {
+export function midiToNote(midi: number): string {
   return Tone.Frequency(midi, 'midi').toNote()
 }
 

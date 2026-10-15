@@ -7,40 +7,46 @@ import { useSession } from './hooks/useSession'
 function App() {
   const session = useSession()
 
-  return (
-    <div className="flex min-h-screen flex-col items-center px-4 py-8 font-mono text-mt-text">
-      <div className="flex w-full max-w-3xl flex-col gap-10">
-        <TopBar
+  if (session.phase === 'running') {
+    return (
+      <div className="flex min-h-dvh flex-col bg-mt-bg font-mono text-mt-text">
+        <QuizArea
           config={session.config}
-          locked={session.phase === 'running'}
-          onSelectCount={session.setCount}
-          onSelectTime={session.setSeconds}
-          onSelectDirection={session.setDirection}
+          question={session.question}
+          feedback={session.feedback}
+          selected={session.selected}
+          correct={session.correct}
+          wrong={session.wrong}
+          answered={session.answered}
+          timeLeft={session.timeLeft}
+          onAnswer={session.answer}
+          onRepeat={session.repeat}
+          onQuit={session.quit}
         />
+      </div>
+    )
+  }
 
+  return (
+    <div className="flex min-h-dvh flex-col items-center px-4 py-6 font-mono text-mt-text sm:py-10">
+      <div className="flex w-full max-w-3xl flex-col gap-8 sm:gap-10">
         {session.phase === 'setup' && (
-          <SessionSettings
-            config={session.config}
-            selected={session.selected}
-            samplesStatus={session.samplesStatus}
-            onToggle={session.toggleInterval}
-            onStart={session.start}
-          />
-        )}
-
-        {session.phase === 'running' && (
-          <QuizArea
-            config={session.config}
-            question={session.question}
-            feedback={session.feedback}
-            selected={session.selected}
-            correct={session.correct}
-            wrong={session.wrong}
-            answered={session.answered}
-            timeLeft={session.timeLeft}
-            onAnswer={session.answer}
-            onRepeat={session.repeat}
-          />
+          <>
+            <TopBar
+              config={session.config}
+              locked={false}
+              onSelectCount={session.setCount}
+              onSelectTime={session.setSeconds}
+              onSelectDirection={session.setDirection}
+            />
+            <SessionSettings
+              config={session.config}
+              selected={session.selected}
+              samplesStatus={session.samplesStatus}
+              onToggle={session.toggleInterval}
+              onStart={session.start}
+            />
+          </>
         )}
 
         {session.phase === 'results' && (
@@ -48,8 +54,9 @@ function App() {
             config={session.config}
             correct={session.correct}
             wrong={session.wrong}
-            onRestart={session.restart}
-            onGoToSetup={session.goToSetup}
+            history={session.history}
+            onNewSession={session.goToSetup}
+            onReplayTask={session.replayTask}
           />
         )}
       </div>

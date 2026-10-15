@@ -39,7 +39,7 @@ export function SessionSettings({
         </p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {INTERVALS.map((interval) => {
           const active = selected.includes(interval.semitones)
           return (
@@ -49,10 +49,10 @@ export function SessionSettings({
               aria-pressed={active}
               onClick={() => onToggle(interval.semitones)}
               className={[
-                'flex w-[104px] flex-col items-center gap-0.5 rounded border px-3 py-2 transition-colors duration-150 outline-none',
+                'flex min-h-14 touch-manipulation flex-col items-center justify-center gap-0.5 rounded border px-3 py-2 transition-colors duration-150 outline-none',
                 active
                   ? 'border-mt-accent bg-mt-accent/10 text-mt-accent'
-                  : 'border-mt-sub/40 text-mt-sub hover:border-mt-text/60 hover:text-mt-text',
+                  : 'border-mt-sub/40 text-mt-sub hover:border-mt-text/60 hover:text-mt-text active:bg-mt-sub/10',
               ].join(' ')}
             >
               <span className="text-base font-bold leading-none">{interval.short}</span>
@@ -83,10 +83,10 @@ export function SessionSettings({
           disabled={blocked}
           onClick={onStart}
           className={[
-            'rounded px-10 py-3 text-lg font-bold uppercase tracking-widest transition-colors duration-150',
+            'min-h-12 w-full touch-manipulation rounded px-10 py-3 text-lg font-bold uppercase tracking-widest transition-colors duration-150 sm:w-auto',
             blocked
               ? 'cursor-not-allowed bg-mt-sub/30 text-mt-sub'
-              : 'bg-mt-accent text-mt-bg hover:bg-mt-accent/85',
+              : 'bg-mt-accent text-mt-bg hover:bg-mt-accent/85 active:scale-[0.99]',
           ].join(' ')}
         >
           {loading ? 'Ładowanie brzmienia pianina...' : 'Start'}

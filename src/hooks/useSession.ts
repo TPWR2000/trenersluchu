@@ -3,6 +3,7 @@ import {
   ensureAudio,
   getSamplesStatus,
   initSamples,
+  midiToNote,
   playInterval,
   releaseAll,
   subscribeSamplesStatus,
@@ -22,6 +23,7 @@ import type {
   Question,
   ResolvedDirection,
   SessionConfig,
+  TaskResult,
 } from '../types'
 
 const FEEDBACK_MS = 450
@@ -44,6 +46,33 @@ function resolvePlayDirection(config: SessionConfig): ResolvedPlay {
   return { direction: config.direction, source: 'chosen' }
 }
 
+function buildTaskResult(
+  taskId: number,
+  question: Question,
+  chosen: number,
+  elapsedMs: number,
+): TaskResult {
+  const lowerNote = midiToNote(question.rootMidi)
+  const upperNote = midiToNote(question.rootMidi + question.semitones)
+  const notesToPlay = question.direction === 'down' ? [upperNote, lowerNote] : [lowerNote, upperNote]
+
+  return {
+    taskId,
+    rootNote: lowerNote,
+    targetNote: upperNote,
+    intervalName: INTERVAL_BY_SEMITONES[question.semitones]?.name ?? 'Nieznany interwał',
+    userAnswer: INTERVAL_BY_SEMITONES[chosen]?.name ?? 'Nieznany interwał',
+    isCorrect: chosen === question.semitones,
+    playMode: RESOLVED_DIRECTION_LABELS[question.direction],
+    notesToPlay,
+    elapsedMs,
+    rootMidi: question.rootMidi,
+    semitones: question.semitones,
+    direction: question.direction,
+    directionSource: question.directionSource,
+  }
+}
+
 export interface UseSession {
   phase: Phase
   config: SessionConfig
@@ -55,6 +84,7 @@ export interface UseSession {
   answered: number
   timeLeft: number
   samplesStatus: SamplesStatus
+  history: TaskResult[]
   canStart: boolean
   setCount: (count: number) => void
   setSeconds: (seconds: number) => void
@@ -63,6 +93,8 @@ export interface UseSession {
   start: () => void
   answer: (semitones: number) => void
   repeat: () => void
+  replayTask: (task: TaskResult) => void
+  quit: () => void
   restart: () => void
   goToSetup: () => void
 }
@@ -81,6 +113,7 @@ export function useSession(): UseSession {
   const [correct, setCorrect] = useState(0)
   const [wrong, setWrong] = useState(0)
   const [timeLeft, setTimeLeft] = useState(0)
+  const [history, setHistory] = useState<TaskResult[]>([])
   const [samplesStatus, setSamplesStatus] = useState<SamplesStatus>(getSamplesStatus)
 
   const configRef = useRef(config)
@@ -91,6 +124,7 @@ export function useSession(): UseSession {
   const lockedRef = useRef(false)
   const busyRef = useRef(false)
   const endAtRef = useRef(0)
+  const startedAtRef = useRef(0)
   const advanceRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -132,6 +166,22 @@ export function useSession(): UseSession {
     setPhase('results')
   }, [clearAdvance])
 
+  const resetToSetup = useCallback(
+    (message: string) => {
+      clearAdvance()
+      lockedRef.current = false
+      releaseAll()
+      setFeedback(null)
+      setQuestion(null)
+      questionRef.current = null
+      setTimeLeft(0)
+      setHistory([])
+      setPhase('setup')
+      console.log(message)
+    },
+    [clearAdvance],
+  )
+
   const pickQuestion = useCallback(() => {
     const pool = selectedRef.current
     if (pool.length === 0) return
@@ -157,6 +207,7 @@ export function useSession(): UseSession {
       `[Session] Nowe pytanie — ${intervalName} (${semitones} pt.), korzeń MIDI ${rootMidi}, ` +
         `kierunek: ${RESOLVED_DIRECTION_LABELS[play.direction]} (${DIRECTION_SOURCE_LABELS[play.source]})`,
     )
+    startedAtRef.current = performance.now()
     questionRef.current = next
     setQuestion(next)
     playInterval({ rootMidi, semitones, direction: play.direction, source: play.source })
@@ -193,6 +244,7 @@ export function useSession(): UseSession {
         setCorrect(0)
         setWrong(0)
         setFeedback(null)
+        setHistory([])
         questionRef.current = null
         setQuestion(null)
         const cfg = configRef.current
@@ -219,6 +271,7 @@ export function useSession(): UseSession {
 
       lockedRef.current = true
       answeredRef.current += 1
+      const elapsedMs = Math.max(0, performance.now() - startedAtRef.current)
 
       const isCorrect = semitones === current.semitones
       if (isCorrect) {
@@ -227,6 +280,14 @@ export function useSession(): UseSession {
         setWrong((value) => value + 1)
       }
       setFeedback({ chosen: semitones, correct: isCorrect })
+
+      const result = buildTaskResult(answeredRef.current, current, semitones, elapsedMs)
+      setHistory((previous) => [...previous, result])
+      console.log(
+        `[Session] Zadanie #${result.taskId}: odpowiedź „${result.userAnswer}”, ` +
+          `poprawna „${result.intervalName}” — ${result.isCorrect ? 'OK' : 'BŁĄD'} ` +
+          `(${Math.round(elapsedMs)} ms).`,
+      )
 
       advanceRef.current = window.setTimeout(() => {
         advanceRef.current = null
@@ -257,6 +318,22 @@ export function useSession(): UseSession {
     })
   }, [])
 
+  const replayTask = useCallback((task: TaskResult) => {
+    void ensureAudio()
+      .then(() => {
+        console.log(`[Session] Odsłuchiwanie zadania #${task.taskId} (${task.notesToPlay.join(' → ')}).`)
+        playInterval({
+          rootMidi: task.rootMidi,
+          semitones: task.semitones,
+          direction: task.direction,
+          source: task.directionSource,
+        })
+      })
+      .catch((error: unknown) => {
+        console.error('[Session] Nie udało się odtworzyć zadania:', error)
+      })
+  }, [])
+
   const setCount = useCallback((count: number) => {
     if (phaseRef.current === 'running') return
     setConfig((previous) => ({ ...previous, mode: 'count', count }))
@@ -282,14 +359,12 @@ export function useSession(): UseSession {
   }, [])
 
   const goToSetup = useCallback(() => {
-    clearAdvance()
-    lockedRef.current = false
-    releaseAll()
-    setFeedback(null)
-    setQuestion(null)
-    questionRef.current = null
-    setPhase('setup')
-  }, [clearAdvance])
+    resetToSetup('[Session] Powrót do ustawień.')
+  }, [resetToSetup])
+
+  const quit = useCallback(() => {
+    resetToSetup('[Session] Sesja anulowana przez użytkownika.')
+  }, [resetToSetup])
 
   const restart = useCallback(() => {
     start()
@@ -314,6 +389,7 @@ export function useSession(): UseSession {
     answered,
     timeLeft,
     samplesStatus,
+    history,
     canStart: selected.length > 0 && samplesStatus === 'ready',
     setCount,
     setSeconds,
@@ -322,6 +398,8 @@ export function useSession(): UseSession {
     start,
     answer,
     repeat,
+    replayTask,
+    quit,
     restart,
     goToSetup,
   }
