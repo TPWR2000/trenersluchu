@@ -1,4 +1,4 @@
-import { DIRECTION_GLYPHS } from '../data/directions'
+import { PLAY_MODE_GLYPHS, PLAY_MODE_LABELS } from '../data/directions'
 import type { SessionConfig, TaskResult } from '../types'
 
 function SpeakerIcon({ className }: { className?: string }) {
@@ -78,10 +78,10 @@ export function ResultsArea({
 
               <span
                 className="w-6 shrink-0 text-center text-lg text-mt-sub"
-                title={task.playMode}
-                aria-label={`Kierunek: ${task.playMode}`}
+                title={PLAY_MODE_LABELS[task.playMode]}
+                aria-label={`Tryb odtwarzania: ${PLAY_MODE_LABELS[task.playMode]}`}
               >
-                {DIRECTION_GLYPHS[task.direction]}
+                {PLAY_MODE_GLYPHS[task.playMode]}
               </span>
 
               <div className="min-w-0 flex-1">
@@ -95,12 +95,12 @@ export function ResultsArea({
                       Twoja odpowiedź: {task.userAnswer} <span aria-hidden="true">✕</span>
                     </p>
                     <p className="truncate text-xs text-mt-success">
-                      Poprawna: {task.intervalName} <span aria-hidden="true">✓</span>
+                      Poprawna: {task.correctAnswer} <span aria-hidden="true">✓</span>
                     </p>
                   </>
                 )}
                 <p className="mt-0.5 truncate text-[11px] text-mt-sub/70 tabular-nums">
-                  {task.notesToPlay.join(' → ')}
+                  {task.notesToPlay.join(', ')}
                 </p>
               </div>
 

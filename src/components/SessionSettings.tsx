@@ -1,7 +1,7 @@
 import type { SamplesStatus } from '../audio/engine'
-import { DIRECTION_OPTION_BY_VALUE, RESOLVED_DIRECTION_LABELS } from '../data/directions'
 import { INTERVALS } from '../data/intervals'
 import type { SessionConfig } from '../types'
+import { StartControls } from './StartControls'
 
 interface SessionSettingsProps {
   config: SessionConfig
@@ -19,16 +19,9 @@ export function SessionSettings({
   onStart,
 }: SessionSettingsProps) {
   const noneSelected = selected.length === 0
-  const loading = samplesStatus === 'idle' || samplesStatus === 'loading'
-  const failed = samplesStatus === 'error'
-  const blocked = noneSelected || loading || failed
   const timeMode = config.mode === 'time'
-  const directionLabel = timeMode
-    ? RESOLVED_DIRECTION_LABELS.harmonic
-    : DIRECTION_OPTION_BY_VALUE[config.direction].label
-  const modeLabel = timeMode
-    ? `${config.seconds}s — kierunek: ${directionLabel.toLowerCase()}`
-    : `${config.count} zadań — kierunek: ${directionLabel.toLowerCase()}`
+  const modeLabel = timeMode ? `${config.seconds}s` : `${config.count} zadań`
+  const hint = 'Wszystkie dźwięki odtwarzane są jednocześnie (harmonicznie).'
 
   return (
     <section className="flex flex-col gap-6">
@@ -64,39 +57,16 @@ export function SessionSettings({
       </div>
 
       <div className="flex flex-col items-center gap-3">
-        {noneSelected && (
-          <p className="text-sm text-mt-error">Wybierz co najmniej jeden interwał.</p>
-        )}
-        {loading && (
-          <p className="animate-pulse text-sm text-mt-accent" role="status" aria-live="polite">
-            Ładowanie brzmienia pianina...
-          </p>
-        )}
-        {failed && (
-          <p className="text-sm text-mt-error" role="alert">
-            Nie udało się pobrać brzmień pianina — sprawdź połączenie i odśwież stronę.
-          </p>
-        )}
-
-        <button
-          type="button"
-          disabled={blocked}
-          onClick={onStart}
-          className={[
-            'min-h-12 w-full touch-manipulation rounded px-10 py-3 text-lg font-bold uppercase tracking-widest transition-colors duration-150 sm:w-auto',
-            blocked
-              ? 'cursor-not-allowed bg-mt-sub/30 text-mt-sub'
-              : 'bg-mt-accent text-mt-bg hover:bg-mt-accent/85 active:scale-[0.99]',
-          ].join(' ')}
+        <StartControls
+          samplesStatus={samplesStatus}
+          disabled={noneSelected}
+          hint={hint}
+          onStart={onStart}
         >
-          {loading ? 'Ładowanie brzmienia pianina...' : 'Start'}
-        </button>
-
-        <p className="max-w-md text-center text-xs text-mt-sub">
-          {timeMode
-            ? `W trybie czasowym interwał zawsze grany jest ${DIRECTION_OPTION_BY_VALUE.harmonic.description} — wybór kierunku jest zablokowany.`
-            : `Kierunek: ${DIRECTION_OPTION_BY_VALUE[config.direction].description}.`}
-        </p>
+          {noneSelected && (
+            <p className="text-sm text-mt-error">Wybierz co najmniej jeden interwał.</p>
+          )}
+        </StartControls>
       </div>
     </section>
   )

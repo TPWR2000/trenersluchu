@@ -1,83 +1,169 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ensureAudio,
   getSamplesStatus,
   initSamples,
   midiToNote,
-  playInterval,
+  playNotes,
   releaseAll,
   subscribeSamplesStatus,
 } from '../audio/engine'
 import type { SamplesStatus } from '../audio/engine'
 import {
   DIRECTION_SOURCE_LABELS,
-  RESOLVED_DIRECTIONS,
-  RESOLVED_DIRECTION_LABELS,
+  PLAY_MODE_LABELS,
+  PLAY_MODES,
 } from '../data/directions'
-import { ALL_SEMITONES, INTERVAL_BY_SEMITONES } from '../data/intervals'
+import {
+  ALL_SEMITONES,
+  INTERVALS,
+  INTERVAL_BY_SEMITONES,
+  intervalKey,
+  parseIntervalKey,
+} from '../data/intervals'
+import {
+  ALL_TRIAD_INVERSIONS,
+  ALL_TRIAD_TYPES,
+  TRIAD_INVERSIONS,
+  TRIAD_TYPES,
+  parseTriadKey,
+  triadKey,
+  triadLabel,
+  triadMidiNotes,
+  triadPool,
+  triadShortLabel,
+} from '../data/triads'
 import type {
+  AnswerOption,
+  Category,
   DirectionSource,
   Feedback,
   Phase,
   PlayDirection,
+  PlayMode,
   Question,
-  ResolvedDirection,
   SessionConfig,
   TaskResult,
+  TriadInversion,
+  TriadType,
 } from '../types'
 
 const FEEDBACK_MS = 450
 const ROOT_MIN_MIDI = 57
 const ROOT_MIDI_RANGE = 10
+const TRIAD_ROOT_MIN_MIDI = 48
+const TRIAD_ROOT_MIDI_RANGE = 25
 
 interface ResolvedPlay {
-  direction: ResolvedDirection
+  playMode: PlayMode
   source: DirectionSource
 }
 
-function resolvePlayDirection(config: SessionConfig): ResolvedPlay {
-  if (config.mode === 'time') {
-    return { direction: 'harmonic', source: 'time' }
+function directionToPlayMode(direction: PlayDirection, source: DirectionSource): ResolvedPlay {
+  if (source === 'time') {
+    return { playMode: 'harmonic', source }
   }
-  if (config.direction === 'random') {
-    const index = Math.floor(Math.random() * RESOLVED_DIRECTIONS.length)
-    return { direction: RESOLVED_DIRECTIONS[index], source: 'random' }
+  switch (direction) {
+    case 'random':
+      return { playMode: PLAY_MODES[Math.floor(Math.random() * PLAY_MODES.length)], source }
+    case 'up':
+      return { playMode: 'asc', source }
+    case 'down':
+      return { playMode: 'desc', source }
+    case 'harmonic':
+      return { playMode: 'harmonic', source }
   }
-  return { direction: config.direction, source: 'chosen' }
+}
+
+function intervalNotes(question: Extract<Question, { category: 'intervals' }>): number[] {
+  if (question.playMode === 'desc') {
+    return [question.rootMidi - question.semitones, question.rootMidi]
+  }
+  return [question.rootMidi, question.rootMidi + question.semitones]
+}
+
+function questionName(question: Question): string {
+  return question.category === 'intervals'
+    ? INTERVAL_BY_SEMITONES[question.semitones]?.name ?? 'Nieznany interwał'
+    : triadLabel(question.triadType, question.inversion)
+}
+
+function questionNotes(question: Question): number[] {
+  return question.category === 'intervals' ? intervalNotes(question) : question.notes
+}
+
+function questionKey(question: Question): string {
+  return question.category === 'intervals'
+    ? intervalKey(question.semitones)
+    : triadKey(question.triadType, question.inversion)
+}
+
+function logNewQuestion(question: Question, rootMidi: number, play: ResolvedPlay): void {
+  console.log(
+    `[Session] Nowe pytanie — ${questionName(question)}, korzeń MIDI ${rootMidi}, ` +
+      `kierunek: ${PLAY_MODE_LABELS[play.playMode]} (${DIRECTION_SOURCE_LABELS[play.source]}), ` +
+      'tryb odtwarzania zastosowany.',
+  )
 }
 
 function buildTaskResult(
   taskId: number,
   question: Question,
-  chosen: number,
+  chosenKey: string,
   elapsedMs: number,
 ): TaskResult {
-  const lowerNote = midiToNote(question.rootMidi)
-  const upperNote = midiToNote(question.rootMidi + question.semitones)
-  const notesToPlay = question.direction === 'down' ? [upperNote, lowerNote] : [lowerNote, upperNote]
+  const notes = questionNotes(question).sort((a, b) => a - b)
+  const notesToPlay = notes.map(midiToNote)
+  const correctAnswer = questionName(question)
 
+  if (question.category === 'intervals') {
+    const chosen = parseIntervalKey(chosenKey)
+    return {
+      taskId,
+      category: 'intervals',
+      playMode: question.playMode,
+      notesToPlay,
+      userAnswer: (chosen !== null && INTERVAL_BY_SEMITONES[chosen]?.name) || 'Nieznany interwał',
+      correctAnswer,
+      isCorrect: chosen === question.semitones,
+      elapsedMs,
+      replay: {
+        notes,
+        name: correctAnswer,
+        playMode: question.playMode,
+        directionSource: question.directionSource,
+      },
+    }
+  }
+
+  const chosen = parseTriadKey(chosenKey)
   return {
     taskId,
-    rootNote: lowerNote,
-    targetNote: upperNote,
-    intervalName: INTERVAL_BY_SEMITONES[question.semitones]?.name ?? 'Nieznany interwał',
-    userAnswer: INTERVAL_BY_SEMITONES[chosen]?.name ?? 'Nieznany interwał',
-    isCorrect: chosen === question.semitones,
-    playMode: RESOLVED_DIRECTION_LABELS[question.direction],
+    category: 'triads',
+    playMode: question.playMode,
     notesToPlay,
+    userAnswer: chosen ? triadLabel(chosen.type, chosen.inversion) : 'Nieznany trójdźwięk',
+    correctAnswer,
+    isCorrect: chosen?.type === question.triadType && chosen?.inversion === question.inversion,
     elapsedMs,
-    rootMidi: question.rootMidi,
-    semitones: question.semitones,
-    direction: question.direction,
-    directionSource: question.directionSource,
+    replay: {
+      notes,
+      name: correctAnswer,
+      playMode: question.playMode,
+      directionSource: question.directionSource,
+    },
   }
 }
 
 export interface UseSession {
   phase: Phase
   config: SessionConfig
-  selected: number[]
+  selectedIntervals: number[]
+  selectedTypes: TriadType[]
+  selectedInversions: TriadInversion[]
+  answerOptions: AnswerOption[]
   question: Question | null
+  correctKey: string | null
   feedback: Feedback | null
   correct: number
   wrong: number
@@ -86,12 +172,15 @@ export interface UseSession {
   samplesStatus: SamplesStatus
   history: TaskResult[]
   canStart: boolean
+  setCategory: (category: Category) => void
   setCount: (count: number) => void
   setSeconds: (seconds: number) => void
   setDirection: (direction: PlayDirection) => void
   toggleInterval: (semitones: number) => void
+  toggleTriadType: (type: TriadType) => void
+  toggleTriadInversion: (inversion: TriadInversion) => void
   start: () => void
-  answer: (semitones: number) => void
+  answer: (key: string) => void
   repeat: () => void
   replayTask: (task: TaskResult) => void
   quit: () => void
@@ -102,12 +191,17 @@ export interface UseSession {
 export function useSession(): UseSession {
   const [phase, setPhase] = useState<Phase>('setup')
   const [config, setConfig] = useState<SessionConfig>({
+    category: 'intervals',
     mode: 'count',
     count: 10,
     seconds: 60,
     direction: 'random',
   })
-  const [selected, setSelected] = useState<number[]>([...ALL_SEMITONES])
+  const [selectedIntervals, setSelectedIntervals] = useState<number[]>([...ALL_SEMITONES])
+  const [selectedTypes, setSelectedTypes] = useState<TriadType[]>([...ALL_TRIAD_TYPES])
+  const [selectedInversions, setSelectedInversions] = useState<TriadInversion[]>([
+    ...ALL_TRIAD_INVERSIONS,
+  ])
   const [question, setQuestion] = useState<Question | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [correct, setCorrect] = useState(0)
@@ -117,7 +211,9 @@ export function useSession(): UseSession {
   const [samplesStatus, setSamplesStatus] = useState<SamplesStatus>(getSamplesStatus)
 
   const configRef = useRef(config)
-  const selectedRef = useRef(selected)
+  const selectedIntervalsRef = useRef(selectedIntervals)
+  const selectedTypesRef = useRef(selectedTypes)
+  const selectedInversionsRef = useRef(selectedInversions)
   const phaseRef = useRef(phase)
   const questionRef = useRef(question)
   const answeredRef = useRef(0)
@@ -132,8 +228,16 @@ export function useSession(): UseSession {
   }, [config])
 
   useEffect(() => {
-    selectedRef.current = selected
-  }, [selected])
+    selectedIntervalsRef.current = selectedIntervals
+  }, [selectedIntervals])
+
+  useEffect(() => {
+    selectedTypesRef.current = selectedTypes
+  }, [selectedTypes])
+
+  useEffect(() => {
+    selectedInversionsRef.current = selectedInversions
+  }, [selectedInversions])
 
   useEffect(() => {
     phaseRef.current = phase
@@ -182,36 +286,78 @@ export function useSession(): UseSession {
     [clearAdvance],
   )
 
+  const playQuestion = useCallback((next: Question) => {
+    playNotes({
+      notes: questionNotes(next),
+      name: questionName(next),
+      playMode: next.playMode,
+      directionSource: next.directionSource,
+    })
+  }, [])
+
   const pickQuestion = useCallback(() => {
-    const pool = selectedRef.current
+    const cfg = configRef.current
+    const previousKey = questionRef.current ? questionKey(questionRef.current) : null
+
+    if (cfg.category === 'intervals') {
+      const pool = selectedIntervalsRef.current
+      if (pool.length === 0) return
+
+      let semitones = pool[Math.floor(Math.random() * pool.length)]
+      if (pool.length > 1 && previousKey !== null) {
+        while (intervalKey(semitones) === previousKey) {
+          semitones = pool[Math.floor(Math.random() * pool.length)]
+        }
+      }
+
+      const rootMidi = ROOT_MIN_MIDI + Math.floor(Math.random() * ROOT_MIDI_RANGE)
+      const play = directionToPlayMode(cfg.direction, cfg.mode === 'time' ? 'time' : 'chosen')
+      const next: Question = {
+        category: 'intervals',
+        rootMidi,
+        semitones,
+        playMode: play.playMode,
+        directionSource: play.source,
+      }
+      logNewQuestion(next, rootMidi, play)
+      startedAtRef.current = performance.now()
+      questionRef.current = next
+      setQuestion(next)
+      playQuestion(next)
+      return
+    }
+
+    const pool = triadPool(selectedTypesRef.current, selectedInversionsRef.current)
     if (pool.length === 0) return
 
-    const previous = questionRef.current?.semitones
-    let semitones = pool[Math.floor(Math.random() * pool.length)]
-    if (pool.length > 1 && previous !== undefined) {
-      while (semitones === previous) {
-        semitones = pool[Math.floor(Math.random() * pool.length)]
+    let key = pool[Math.floor(Math.random() * pool.length)]
+    if (pool.length > 1 && previousKey !== null) {
+      while (key === previousKey) {
+        key = pool[Math.floor(Math.random() * pool.length)]
       }
     }
 
-    const rootMidi = ROOT_MIN_MIDI + Math.floor(Math.random() * ROOT_MIDI_RANGE)
-    const play = resolvePlayDirection(configRef.current)
+    const parsed = parseTriadKey(key)
+    if (!parsed) return
+    const { type, inversion } = parsed
+    const rootMidi = TRIAD_ROOT_MIN_MIDI + Math.floor(Math.random() * TRIAD_ROOT_MIDI_RANGE)
+    const play = directionToPlayMode(cfg.direction, cfg.mode === 'time' ? 'time' : 'chosen')
+    const notes = triadMidiNotes(rootMidi, type, inversion)
     const next: Question = {
+      category: 'triads',
       rootMidi,
-      semitones,
-      direction: play.direction,
+      triadType: type,
+      inversion,
+      notes,
+      playMode: play.playMode,
       directionSource: play.source,
     }
-    const intervalName = INTERVAL_BY_SEMITONES[semitones]?.name ?? 'Nieznany interwał'
-    console.log(
-      `[Session] Nowe pytanie — ${intervalName} (${semitones} pt.), korzeń MIDI ${rootMidi}, ` +
-        `kierunek: ${RESOLVED_DIRECTION_LABELS[play.direction]} (${DIRECTION_SOURCE_LABELS[play.source]})`,
-    )
+    logNewQuestion(next, rootMidi, play)
     startedAtRef.current = performance.now()
     questionRef.current = next
     setQuestion(next)
-    playInterval({ rootMidi, semitones, direction: play.direction, source: play.source })
-  }, [])
+    playQuestion(next)
+  }, [playQuestion])
 
   useEffect(() => {
     if (phase !== 'running' || config.mode !== 'time') return
@@ -227,7 +373,12 @@ export function useSession(): UseSession {
 
   const start = useCallback(() => {
     if (busyRef.current || phaseRef.current === 'running') return
-    if (selectedRef.current.length === 0) return
+    const cfg = configRef.current
+    const poolEmpty =
+      cfg.category === 'intervals'
+        ? selectedIntervalsRef.current.length === 0
+        : selectedTypesRef.current.length === 0 || selectedInversionsRef.current.length === 0
+    if (poolEmpty) return
     if (getSamplesStatus() !== 'ready') {
       console.warn('[Session] Start odrzucony — sample pianina nie są jeszcze gotowe.')
       return
@@ -247,7 +398,6 @@ export function useSession(): UseSession {
         setHistory([])
         questionRef.current = null
         setQuestion(null)
-        const cfg = configRef.current
         if (cfg.mode === 'time') {
           endAtRef.current = performance.now() + cfg.seconds * 1000
         }
@@ -264,7 +414,7 @@ export function useSession(): UseSession {
   }, [clearAdvance, pickQuestion])
 
   const answer = useCallback(
-    (semitones: number) => {
+    (key: string) => {
       if (phaseRef.current !== 'running' || lockedRef.current) return
       const current = questionRef.current
       if (!current) return
@@ -273,19 +423,19 @@ export function useSession(): UseSession {
       answeredRef.current += 1
       const elapsedMs = Math.max(0, performance.now() - startedAtRef.current)
 
-      const isCorrect = semitones === current.semitones
+      const isCorrect = key === questionKey(current)
       if (isCorrect) {
         setCorrect((value) => value + 1)
       } else {
         setWrong((value) => value + 1)
       }
-      setFeedback({ chosen: semitones, correct: isCorrect })
+      setFeedback({ chosen: key, correct: isCorrect })
 
-      const result = buildTaskResult(answeredRef.current, current, semitones, elapsedMs)
+      const result = buildTaskResult(answeredRef.current, current, key, elapsedMs)
       setHistory((previous) => [...previous, result])
       console.log(
         `[Session] Zadanie #${result.taskId}: odpowiedź „${result.userAnswer}”, ` +
-          `poprawna „${result.intervalName}” — ${result.isCorrect ? 'OK' : 'BŁĄD'} ` +
+          `poprawna „${result.correctAnswer}” — ${result.isCorrect ? 'OK' : 'BŁĄD'} ` +
           `(${Math.round(elapsedMs)} ms).`,
       )
 
@@ -310,28 +460,31 @@ export function useSession(): UseSession {
     if (phaseRef.current !== 'running' || lockedRef.current) return
     const current = questionRef.current
     if (!current) return
-    playInterval({
-      rootMidi: current.rootMidi,
-      semitones: current.semitones,
-      direction: current.direction,
-      source: current.directionSource,
-    })
-  }, [])
+    playQuestion(current)
+  }, [playQuestion])
 
   const replayTask = useCallback((task: TaskResult) => {
     void ensureAudio()
       .then(() => {
-        console.log(`[Session] Odsłuchiwanie zadania #${task.taskId} (${task.notesToPlay.join(' → ')}).`)
-        playInterval({
-          rootMidi: task.rootMidi,
-          semitones: task.semitones,
-          direction: task.direction,
-          source: task.directionSource,
+        console.log(
+          `[Session] Odsłuchiwanie zadania #${task.taskId} (${task.replay.name}, ` +
+            `tryb: ${PLAY_MODE_LABELS[task.replay.playMode]}).`,
+        )
+        playNotes({
+          notes: task.replay.notes,
+          name: task.replay.name,
+          playMode: task.replay.playMode,
+          directionSource: task.replay.directionSource,
         })
       })
       .catch((error: unknown) => {
         console.error('[Session] Nie udało się odtworzyć zadania:', error)
       })
+  }, [])
+
+  const setCategory = useCallback((category: Category) => {
+    if (phaseRef.current === 'running') return
+    setConfig((previous) => ({ ...previous, category }))
   }, [])
 
   const setCount = useCallback((count: number) => {
@@ -351,10 +504,26 @@ export function useSession(): UseSession {
 
   const toggleInterval = useCallback((semitones: number) => {
     if (phaseRef.current === 'running') return
-    setSelected((previous) =>
+    setSelectedIntervals((previous) =>
       previous.includes(semitones)
         ? previous.filter((value) => value !== semitones)
         : [...previous, semitones].sort((a, b) => a - b),
+    )
+  }, [])
+
+  const toggleTriadType = useCallback((type: TriadType) => {
+    if (phaseRef.current === 'running') return
+    setSelectedTypes((previous) =>
+      previous.includes(type) ? previous.filter((value) => value !== type) : [...previous, type],
+    )
+  }, [])
+
+  const toggleTriadInversion = useCallback((inversion: TriadInversion) => {
+    if (phaseRef.current === 'running') return
+    setSelectedInversions((previous) =>
+      previous.includes(inversion)
+        ? previous.filter((value) => value !== inversion)
+        : [...previous, inversion],
     )
   }, [])
 
@@ -376,13 +545,45 @@ export function useSession(): UseSession {
     }
   }, [clearAdvance])
 
+  const answerOptions = useMemo<AnswerOption[]>(() => {
+    if (config.category === 'intervals') {
+      return INTERVALS.filter((interval) => selectedIntervals.includes(interval.semitones)).map(
+        (interval) => ({
+          key: intervalKey(interval.semitones),
+          short: interval.short,
+          name: interval.name,
+        }),
+      )
+    }
+
+    const options: AnswerOption[] = []
+    for (const type of TRIAD_TYPES) {
+      if (!selectedTypes.includes(type.value)) continue
+      for (const inversion of TRIAD_INVERSIONS) {
+        if (!selectedInversions.includes(inversion.value)) continue
+        options.push({
+          key: triadKey(type.value, inversion.value),
+          short: triadShortLabel(type.value, inversion.value),
+          name: triadLabel(type.value, inversion.value),
+        })
+      }
+    }
+    return options
+  }, [config.category, selectedIntervals, selectedTypes, selectedInversions])
+
   const answered = correct + wrong
+  const correctKey = question ? questionKey(question) : null
+  const canStart = answerOptions.length > 0 && samplesStatus === 'ready'
 
   return {
     phase,
     config,
-    selected,
+    selectedIntervals,
+    selectedTypes,
+    selectedInversions,
+    answerOptions,
     question,
+    correctKey,
     feedback,
     correct,
     wrong,
@@ -390,11 +591,14 @@ export function useSession(): UseSession {
     timeLeft,
     samplesStatus,
     history,
-    canStart: selected.length > 0 && samplesStatus === 'ready',
+    canStart,
+    setCategory,
     setCount,
     setSeconds,
     setDirection,
     toggleInterval,
+    toggleTriadType,
+    toggleTriadInversion,
     start,
     answer,
     repeat,

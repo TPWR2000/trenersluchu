@@ -1,5 +1,4 @@
-import { INTERVALS } from '../data/intervals'
-import type { Feedback, Question, SessionConfig } from '../types'
+import type { AnswerOption, Feedback, Question, SessionConfig } from '../types'
 
 function SpeakerIcon({ className }: { className?: string }) {
   return (
@@ -43,13 +42,14 @@ function RepeatIcon({ className }: { className?: string }) {
 interface QuizAreaProps {
   config: SessionConfig
   question: Question | null
+  answerOptions: AnswerOption[]
+  correctKey: string | null
   feedback: Feedback | null
-  selected: number[]
   correct: number
   wrong: number
   answered: number
   timeLeft: number
-  onAnswer: (semitones: number) => void
+  onAnswer: (key: string) => void
   onRepeat: () => void
   onQuit: () => void
 }
@@ -57,8 +57,9 @@ interface QuizAreaProps {
 export function QuizArea({
   config,
   question,
+  answerOptions,
+  correctKey,
   feedback,
-  selected,
   correct,
   wrong,
   answered,
@@ -76,21 +77,20 @@ export function QuizArea({
   const counterLabel = isTimeMode ? 'Czas' : 'Zadanie'
   const urgent = isTimeMode && secondsLeft <= 10
 
-  const answerClass = (semitones: number) => {
-    if (feedback && feedback.chosen === semitones) {
+  const answerClass = (key: string) => {
+    if (feedback && feedback.chosen === key) {
       return feedback.correct
         ? 'border-mt-success bg-mt-success/20 text-mt-success'
         : 'border-mt-error bg-mt-error/20 text-mt-error'
     }
-    if (feedback && !feedback.correct && semitones === question?.semitones) {
+    if (feedback && !feedback.correct && key === correctKey) {
       return 'border-mt-success bg-mt-success/10 text-mt-success'
     }
     return 'border-mt-sub/40 text-mt-text hover:border-mt-accent hover:text-mt-accent active:bg-mt-accent/10'
   }
 
-  const activeIntervals = INTERVALS.filter((interval) => selected.includes(interval.semitones))
   const gridCols =
-    activeIntervals.length <= 4
+    answerOptions.length <= 4
       ? 'grid-cols-2'
       : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
 
@@ -163,20 +163,20 @@ export function QuizArea({
       </div>
 
       <div className={`mx-auto grid w-full max-w-2xl gap-2.5 ${gridCols}`}>
-        {activeIntervals.map((interval) => (
+        {answerOptions.map((option) => (
           <button
-            key={interval.semitones}
+            key={option.key}
             type="button"
             disabled={locked}
-            onClick={() => onAnswer(interval.semitones)}
+            onClick={() => onAnswer(option.key)}
             className={[
               'flex min-h-12 touch-manipulation flex-col items-center justify-center gap-0.5 rounded border px-3 py-2 transition-colors duration-150 outline-none',
               locked ? 'cursor-not-allowed' : '',
-              answerClass(interval.semitones),
+              answerClass(option.key),
             ].join(' ')}
           >
-            <span className="text-lg font-bold leading-none">{interval.short}</span>
-            <span className="text-[11px] leading-tight">{interval.name}</span>
+            <span className="text-lg font-bold leading-none">{option.short}</span>
+            <span className="text-[11px] leading-tight">{option.name}</span>
           </button>
         ))}
       </div>

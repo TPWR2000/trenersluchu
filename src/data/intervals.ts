@@ -25,3 +25,13 @@ export const ALL_SEMITONES: number[] = INTERVALS.map((interval) => interval.semi
 export const INTERVAL_BY_SEMITONES: Record<number, Interval> = Object.fromEntries(
   INTERVALS.map((interval) => [interval.semitones, interval]),
 )
+
+export function intervalKey(semitones: number): string {
+  return `i:${semitones}`
+}
+
+export function parseIntervalKey(key: string): number | null {
+  if (!key.startsWith('i:')) return null
+  const value = Number(key.slice(2))
+  return Number.isFinite(value) ? value : null
+}

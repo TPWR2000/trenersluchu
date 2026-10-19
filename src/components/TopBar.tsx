@@ -1,10 +1,10 @@
 import { DIRECTION_OPTIONS } from '../data/directions'
-import type { PlayDirection, SessionConfig } from '../types'
+import type { Category, PlayDirection, SessionConfig } from '../types'
 
-const CATEGORIES = [
-  { label: 'Interwały', enabled: true },
-  { label: 'Trójdźwięki', enabled: false },
-  { label: 'Akordy', enabled: false },
+const CATEGORIES: { value: Category | null; label: string; enabled: boolean }[] = [
+  { value: 'intervals', label: 'Interwały', enabled: true },
+  { value: 'triads', label: 'Trójdźwięki', enabled: true },
+  { value: null, label: 'Akordy', enabled: false },
 ]
 
 const COUNT_OPTIONS = [10, 20, 50]
@@ -13,6 +13,7 @@ const TIME_OPTIONS = [15, 30, 60]
 interface TopBarProps {
   config: SessionConfig
   locked: boolean
+  onSelectCategory: (category: Category) => void
   onSelectCount: (count: number) => void
   onSelectTime: (seconds: number) => void
   onSelectDirection: (direction: PlayDirection) => void
@@ -21,6 +22,7 @@ interface TopBarProps {
 export function TopBar({
   config,
   locked,
+  onSelectCategory,
   onSelectCount,
   onSelectTime,
   onSelectDirection,
@@ -54,21 +56,30 @@ export function TopBar({
       </div>
 
       <nav className="flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-1 text-sm">
-        {CATEGORIES.map((category) => (
-          <button
-            key={category.label}
-            type="button"
-            disabled={!category.enabled || locked}
-            className={[
-              'min-h-11 px-1 pb-1 transition-colors duration-150',
-              category.enabled
-                ? 'border-b-2 border-mt-accent text-mt-accent'
-                : 'cursor-not-allowed text-mt-sub/60',
-            ].join(' ')}
-          >
-            {category.label}
-          </button>
-        ))}
+        {CATEGORIES.map((category) => {
+          const active = category.enabled && category.value === config.category
+          return (
+            <button
+              key={category.label}
+              type="button"
+              disabled={!category.enabled || locked}
+              aria-current={active ? 'page' : undefined}
+              onClick={() => {
+                if (category.value) onSelectCategory(category.value)
+              }}
+              className={[
+                'min-h-11 px-1 pb-1 transition-colors duration-150',
+                !category.enabled
+                  ? 'cursor-not-allowed text-mt-sub/60'
+                  : active
+                    ? 'border-b-2 border-mt-accent text-mt-accent'
+                    : 'border-b-2 border-transparent text-mt-sub hover:text-mt-text',
+              ].join(' ')}
+            >
+              {category.label}
+            </button>
+          )
+        })}
       </nav>
 
       <div className="flex w-full flex-col items-center gap-4 text-sm">
@@ -129,11 +140,11 @@ export function TopBar({
             </button>
           ))}
         </div>
-        {timeMode && (
-          <span className="text-center text-xs text-mt-sub/70">
-            zablokowane w trybie czasowym — zawsze harmonicznie
-          </span>
-        )}
+        <span className="text-center text-xs text-mt-sub/70">
+          {timeMode
+            ? 'zablokowane w trybie czasowym — zawsze harmonicznie'
+            : 'wszystkie dźwięki grane jednocześnie (harmonicznie)'}
+        </span>
       </div>
     </header>
   )

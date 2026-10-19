@@ -1,4 +1,4 @@
-import type { DirectionSource, PlayDirection, ResolvedDirection } from '../types'
+import type { DirectionSource, PlayDirection, PlayMode } from '../types'
 
 export interface DirectionOption {
   value: PlayDirection
@@ -10,36 +10,36 @@ export const DIRECTION_OPTIONS: DirectionOption[] = [
   {
     value: 'random',
     label: 'Losowo',
-    description: 'dla każdego pytania losowany jest kierunek: góra, dół lub harmonicznie',
+    description: 'dla każdego pytania losowany jest tryb: w górę, w dół lub harmonicznie',
   },
   {
     value: 'up',
     label: 'W górę',
-    description: 'nuta bazowa, a po 0.5s nuta wyższa',
+    description: 'nuty grane po kolei od najniższej do najwyższej (odstęp 0.35s)',
   },
   {
     value: 'down',
     label: 'W dół',
-    description: 'nuta wyższa, a po 0.5s nuta bazowa',
+    description: 'nuty grane po kolei od najwyższej do najniższej (odstęp 0.35s)',
   },
   {
     value: 'harmonic',
     label: 'Harmonicznie',
-    description: 'obie nuty grane jednocześnie',
+    description: 'wszystkie nuty grane dokładnie w tym samym momencie',
   },
 ]
 
-export const RESOLVED_DIRECTIONS: ResolvedDirection[] = ['up', 'down', 'harmonic']
+export const PLAY_MODES: PlayMode[] = ['asc', 'desc', 'harmonic']
 
-export const RESOLVED_DIRECTION_LABELS: Record<ResolvedDirection, string> = {
-  up: 'W górę',
-  down: 'W dół',
+export const PLAY_MODE_LABELS: Record<PlayMode, string> = {
+  asc: 'W górę',
+  desc: 'W dół',
   harmonic: 'Harmonicznie',
 }
 
-export const DIRECTION_GLYPHS: Record<ResolvedDirection, string> = {
-  up: '↑',
-  down: '↓',
+export const PLAY_MODE_GLYPHS: Record<PlayMode, string> = {
+  asc: '↑',
+  desc: '↓',
   harmonic: '♫',
 }
 

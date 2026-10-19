@@ -1,15 +1,17 @@
 import * as Tone from 'tone'
-import { DIRECTION_SOURCE_LABELS, RESOLVED_DIRECTION_LABELS } from '../data/directions'
-import { INTERVAL_BY_SEMITONES } from '../data/intervals'
-import type { DirectionSource, ResolvedDirection } from '../types'
+import {
+  DIRECTION_SOURCE_LABELS,
+  PLAY_MODE_LABELS,
+} from '../data/directions'
+import type { DirectionSource, PlayMode } from '../types'
 
 export type SamplesStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 export interface PlaybackRequest {
-  rootMidi: number
-  semitones: number
-  direction: ResolvedDirection
-  source: DirectionSource
+  notes: number[]
+  name: string
+  playMode: PlayMode
+  directionSource: DirectionSource
 }
 
 const PIANO_BASE_URL = 'https://tonejs.github.io/audio/salamander/'
@@ -26,10 +28,9 @@ const PIANO_URLS = {
   C8: 'C8.mp3',
 }
 
-const NOTE_DURATION = 0.5
-const NOTE_GAP = 0.5
-const HARMONIC_DURATION = 1.2
-const UNISON_DURATION = 0.7
+const HARMONIC_DURATION = '2n' //1n oznacza całąnute 2n półnute i itp
+const SEQUENCE_NOTE_DURATION = '4n'
+const SEQUENCE_GAP = 0.35
 
 let sampler: Tone.Sampler | null = null
 let samplesStatus: SamplesStatus = 'idle'
@@ -87,28 +88,13 @@ export function midiToNote(midi: number): string {
   return Tone.Frequency(midi, 'midi').toNote()
 }
 
-function logPlayback(request: PlaybackRequest, note1: string, midi1: number, note2: string, midi2: number): void {
-  const { semitones, direction, source } = request
-  const intervalName = INTERVAL_BY_SEMITONES[semitones]?.name ?? 'Nieznany interwał'
-  const directionLabel = RESOLVED_DIRECTION_LABELS[direction]
-  const sourceLabel = DIRECTION_SOURCE_LABELS[source]
-
-  console.log(
-    [
-      '========================================',
-      '[AUDIO PLAYBACK]',
-      `Tryb odtwarzania: ${directionLabel} (${sourceLabel})`,
-      `Nuta 1: ${note1} (MIDI: ${midi1})`,
-      `Nuta 2: ${note2} (MIDI: ${midi2})`,
-      `Interwał: ${intervalName} (${semitones} półtonów)`,
-      '========================================',
-    ].join('\n'),
-  )
+function describeMode(request: PlaybackRequest): string {
+  const label = PLAY_MODE_LABELS[request.playMode]
+  if (request.directionSource === 'chosen') return label
+  return `${label} (${DIRECTION_SOURCE_LABELS[request.directionSource]})`
 }
 
-export function playInterval(request: PlaybackRequest): void {
-  const { rootMidi, semitones, direction } = request
-
+export function playNotes(request: PlaybackRequest): void {
   if (!sampler || samplesStatus !== 'ready') {
     console.warn(
       `[AudioEngine] Odtwarzanie pominięte — sample pianina nie są gotowe (status: ${samplesStatus}).`,
@@ -118,32 +104,31 @@ export function playInterval(request: PlaybackRequest): void {
 
   sampler.releaseAll()
 
-  const lowerMidi = rootMidi
-  const upperMidi = rootMidi + semitones
-  const lower = midiToNote(lowerMidi)
-  const upper = midiToNote(upperMidi)
+  const sortedNotes = [...new Set(request.notes)].sort((a, b) => a - b)
+  const noteNames = sortedNotes.map(midiToNote)
+  const playModeLabel = describeMode(request)
 
-  const descending = direction === 'down'
-  const note1 = descending ? upper : lower
-  const midi1 = descending ? upperMidi : lowerMidi
-  const note2 = descending ? lower : upper
-  const midi2 = descending ? lowerMidi : upperMidi
+  console.log(
+    [
+      '========================================',
+      '[AUDIO PLAYBACK]',
+      `Tryb odtwarzania: ${playModeLabel}`,
+      `Nazwa: ${request.name}`,
+      `Nuty: ${noteNames.join(', ')} (MIDI: ${sortedNotes.join(', ')})`,
+      '========================================',
+    ].join('\n'),
+  )
 
-  logPlayback(request, note1, midi1, note2, midi2)
-
-  const now = Tone.now()
-
-  if (direction === 'harmonic') {
-    if (semitones === 0) {
-      sampler.triggerAttackRelease(lower, UNISON_DURATION, now)
-    } else {
-      sampler.triggerAttackRelease([lower, upper], HARMONIC_DURATION, now)
-    }
+  if (request.playMode === 'harmonic') {
+    sampler.triggerAttackRelease(noteNames, HARMONIC_DURATION)
     return
   }
 
-  sampler.triggerAttackRelease(note1, NOTE_DURATION, now)
-  sampler.triggerAttackRelease(note2, NOTE_DURATION, now + NOTE_GAP)
+  const orderedNames = request.playMode === 'desc' ? [...noteNames].reverse() : noteNames
+  const start = Tone.now()
+  orderedNames.forEach((note, index) => {
+    sampler?.triggerAttackRelease(note, SEQUENCE_NOTE_DURATION, start + index * SEQUENCE_GAP)
+  })
 }
 
 export function releaseAll(): void {

@@ -1,6 +1,7 @@
 import { ResultsArea } from './components/ResultsArea'
 import { QuizArea } from './components/QuizArea'
 import { SessionSettings } from './components/SessionSettings'
+import { TriadSettings } from './components/TriadSettings'
 import { TopBar } from './components/TopBar'
 import { useSession } from './hooks/useSession'
 
@@ -13,8 +14,9 @@ function App() {
         <QuizArea
           config={session.config}
           question={session.question}
+          answerOptions={session.answerOptions}
+          correctKey={session.correctKey}
           feedback={session.feedback}
-          selected={session.selected}
           correct={session.correct}
           wrong={session.wrong}
           answered={session.answered}
@@ -35,17 +37,30 @@ function App() {
             <TopBar
               config={session.config}
               locked={false}
+              onSelectCategory={session.setCategory}
               onSelectCount={session.setCount}
               onSelectTime={session.setSeconds}
               onSelectDirection={session.setDirection}
             />
-            <SessionSettings
-              config={session.config}
-              selected={session.selected}
-              samplesStatus={session.samplesStatus}
-              onToggle={session.toggleInterval}
-              onStart={session.start}
-            />
+            {session.config.category === 'intervals' ? (
+              <SessionSettings
+                config={session.config}
+                selected={session.selectedIntervals}
+                samplesStatus={session.samplesStatus}
+                onToggle={session.toggleInterval}
+                onStart={session.start}
+              />
+            ) : (
+              <TriadSettings
+                config={session.config}
+                selectedTypes={session.selectedTypes}
+                selectedInversions={session.selectedInversions}
+                samplesStatus={session.samplesStatus}
+                onToggleType={session.toggleTriadType}
+                onToggleInversion={session.toggleTriadInversion}
+                onStart={session.start}
+              />
+            )}
           </>
         )}
 
