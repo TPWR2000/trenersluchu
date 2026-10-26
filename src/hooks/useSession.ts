@@ -22,6 +22,19 @@ import {
   parseIntervalKey,
 } from '../data/intervals'
 import {
+  ALL_CHORD_COMBINATIONS,
+  CHORD_INVERSION_BY_VALUE,
+  SEVENTH_CHORD_BY_VALUE,
+  chordInversionsFor,
+  chordKey,
+  chordLabel,
+  chordMidiNotes,
+  chordPool,
+  chordShortLabel,
+  isChordInversionAllowed,
+  parseChordKey,
+} from '../data/chords'
+import {
   ALL_TRIAD_COMBINATIONS,
   isTriadInversionAllowed,
   parseTriadKey,
@@ -42,6 +55,8 @@ import type {
   PlayMode,
   Question,
   SessionConfig,
+  SeventhChordInversion,
+  SeventhChordType,
   TaskResult,
   TriadInversion,
   TriadType,
@@ -52,6 +67,8 @@ const ROOT_MIN_MIDI = 57
 const ROOT_MIDI_RANGE = 10
 const TRIAD_ROOT_MIN_MIDI = 48
 const TRIAD_ROOT_MIDI_RANGE = 25
+const CHORD_ROOT_MIN_MIDI = 48
+const CHORD_ROOT_MIDI_RANGE = 20
 
 interface ResolvedPlay {
   playMode: PlayMode
@@ -82,9 +99,13 @@ function intervalNotes(question: Extract<Question, { category: 'intervals' }>): 
 }
 
 function questionName(question: Question): string {
-  return question.category === 'intervals'
-    ? INTERVAL_BY_SEMITONES[question.semitones]?.name ?? 'Nieznany interwał'
-    : triadLabel(question.triadType, question.inversion)
+  if (question.category === 'intervals') {
+    return INTERVAL_BY_SEMITONES[question.semitones]?.name ?? 'Nieznany interwał'
+  }
+  if (question.category === 'triads') {
+    return triadLabel(question.triadType, question.inversion)
+  }
+  return chordLabel(question.chordType, question.inversion)
 }
 
 function questionNotes(question: Question): number[] {
@@ -92,14 +113,24 @@ function questionNotes(question: Question): number[] {
 }
 
 function questionKey(question: Question): string {
-  return question.category === 'intervals'
-    ? intervalKey(question.semitones)
-    : triadKey(question.triadType, question.inversion)
+  if (question.category === 'intervals') return intervalKey(question.semitones)
+  if (question.category === 'triads') return triadKey(question.triadType, question.inversion)
+  return chordKey(question.chordType, question.inversion)
 }
 
 function logNewQuestion(question: Question, rootMidi: number, play: ResolvedPlay): void {
+  const notes = questionNotes(question)
+  if (question.category === 'chords') {
+    const chord = SEVENTH_CHORD_BY_VALUE[question.chordType]
+    const inversion = CHORD_INVERSION_BY_VALUE[question.inversion]
+    console.log(
+      `[AudioEngine - Septymowy] Typ: ${chord.short} | Przewrót: ${inversion.short} | ` +
+        `Nuty: ${notes.map(midiToNote).join(', ')}`,
+    )
+  }
   console.log(
     `[Session] Nowe pytanie — ${questionName(question)}, korzeń MIDI ${rootMidi}, ` +
+      `nuty: ${notes.map(midiToNote).join(', ')} (MIDI: ${notes.join(', ')}), ` +
       `kierunek: ${PLAY_MODE_LABELS[play.playMode]} (${DIRECTION_SOURCE_LABELS[play.source]}), ` +
       'tryb odtwarzania zastosowany.',
   )
@@ -135,15 +166,38 @@ function buildTaskResult(
     }
   }
 
-  const chosen = parseTriadKey(chosenKey)
+  if (question.category === 'triads') {
+    const chosen = parseTriadKey(chosenKey)
+    return {
+      taskId,
+      category: 'triads',
+      playMode: question.playMode,
+      notesToPlay,
+      userAnswer: chosen ? triadLabel(chosen.type, chosen.inversion) : 'Nieznany trójdźwięk',
+      correctAnswer,
+      isCorrect: chosen?.type === question.triadType && chosen?.inversion === question.inversion,
+      elapsedMs,
+      replay: {
+        notes,
+        name: correctAnswer,
+        playMode: question.playMode,
+        directionSource: question.directionSource,
+      },
+    }
+  }
+
+  const chosen = parseChordKey(chosenKey)
   return {
     taskId,
-    category: 'triads',
+    category: 'chords',
     playMode: question.playMode,
     notesToPlay,
-    userAnswer: chosen ? triadLabel(chosen.type, chosen.inversion) : 'Nieznany trójdźwięk',
+    userAnswer: chosen
+      ? chordLabel(chosen.type, chosen.inversion)
+      : 'Nieznany akord septymowy',
     correctAnswer,
-    isCorrect: chosen?.type === question.triadType && chosen?.inversion === question.inversion,
+    isCorrect:
+      chosen?.type === question.chordType && chosen?.inversion === question.inversion,
     elapsedMs,
     replay: {
       notes,
@@ -159,6 +213,7 @@ export interface UseSession {
   config: SessionConfig
   selectedIntervals: number[]
   selectedTriads: string[]
+  selectedChords: string[]
   answerOptions: AnswerOption[]
   question: Question | null
   correctKey: string | null
@@ -177,6 +232,8 @@ export interface UseSession {
   toggleInterval: (semitones: number) => void
   toggleTriadCombination: (type: TriadType, inversion: TriadInversion) => void
   toggleTriadType: (type: TriadType) => void
+  toggleChordCombination: (type: SeventhChordType, inversion: SeventhChordInversion) => void
+  toggleChordType: (type: SeventhChordType) => void
   start: () => void
   answer: (key: string) => void
   repeat: () => void
@@ -197,6 +254,7 @@ export function useSession(): UseSession {
   })
   const [selectedIntervals, setSelectedIntervals] = useState<number[]>([...ALL_SEMITONES])
   const [selectedTriads, setSelectedTriads] = useState<string[]>([...ALL_TRIAD_COMBINATIONS])
+  const [selectedChords, setSelectedChords] = useState<string[]>([...ALL_CHORD_COMBINATIONS])
   const [question, setQuestion] = useState<Question | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [correct, setCorrect] = useState(0)
@@ -208,6 +266,7 @@ export function useSession(): UseSession {
   const configRef = useRef(config)
   const selectedIntervalsRef = useRef(selectedIntervals)
   const selectedTriadsRef = useRef(selectedTriads)
+  const selectedChordsRef = useRef(selectedChords)
   const phaseRef = useRef(phase)
   const questionRef = useRef(question)
   const answeredRef = useRef(0)
@@ -228,6 +287,10 @@ export function useSession(): UseSession {
   useEffect(() => {
     selectedTriadsRef.current = selectedTriads
   }, [selectedTriads])
+
+  useEffect(() => {
+    selectedChordsRef.current = selectedChords
+  }, [selectedChords])
 
   useEffect(() => {
     phaseRef.current = phase
@@ -317,7 +380,41 @@ export function useSession(): UseSession {
       return
     }
 
-    const pool = triadPool(selectedTriadsRef.current)
+    if (cfg.category === 'triads') {
+      const pool = triadPool(selectedTriadsRef.current)
+      if (pool.length === 0) return
+
+      let key = pool[Math.floor(Math.random() * pool.length)]
+      if (pool.length > 1 && previousKey !== null) {
+        while (key === previousKey) {
+          key = pool[Math.floor(Math.random() * pool.length)]
+        }
+      }
+
+      const parsed = parseTriadKey(key)
+      if (!parsed) return
+      const { type, inversion } = parsed
+      const rootMidi = TRIAD_ROOT_MIN_MIDI + Math.floor(Math.random() * TRIAD_ROOT_MIDI_RANGE)
+      const play = directionToPlayMode(cfg.direction, cfg.mode === 'time' ? 'time' : 'chosen')
+      const notes = triadMidiNotes(rootMidi, type, inversion)
+      const next: Question = {
+        category: 'triads',
+        rootMidi,
+        triadType: type,
+        inversion,
+        notes,
+        playMode: play.playMode,
+        directionSource: play.source,
+      }
+      logNewQuestion(next, rootMidi, play)
+      startedAtRef.current = performance.now()
+      questionRef.current = next
+      setQuestion(next)
+      playQuestion(next)
+      return
+    }
+
+    const pool = chordPool(selectedChordsRef.current)
     if (pool.length === 0) return
 
     let key = pool[Math.floor(Math.random() * pool.length)]
@@ -327,16 +424,16 @@ export function useSession(): UseSession {
       }
     }
 
-    const parsed = parseTriadKey(key)
+    const parsed = parseChordKey(key)
     if (!parsed) return
     const { type, inversion } = parsed
-    const rootMidi = TRIAD_ROOT_MIN_MIDI + Math.floor(Math.random() * TRIAD_ROOT_MIDI_RANGE)
+    const rootMidi = CHORD_ROOT_MIN_MIDI + Math.floor(Math.random() * CHORD_ROOT_MIDI_RANGE)
     const play = directionToPlayMode(cfg.direction, cfg.mode === 'time' ? 'time' : 'chosen')
-    const notes = triadMidiNotes(rootMidi, type, inversion)
+    const notes = chordMidiNotes(rootMidi, type, inversion)
     const next: Question = {
-      category: 'triads',
+      category: 'chords',
       rootMidi,
-      triadType: type,
+      chordType: type,
       inversion,
       notes,
       playMode: play.playMode,
@@ -367,7 +464,9 @@ export function useSession(): UseSession {
     const poolEmpty =
       cfg.category === 'intervals'
         ? selectedIntervalsRef.current.length === 0
-        : triadPool(selectedTriadsRef.current).length === 0
+        : cfg.category === 'triads'
+          ? triadPool(selectedTriadsRef.current).length === 0
+          : chordPool(selectedChordsRef.current).length === 0
     if (poolEmpty) return
     if (getSamplesStatus() !== 'ready') {
       console.warn('[Session] Start odrzucony — sample pianina nie są jeszcze gotowe.')
@@ -527,6 +626,32 @@ export function useSession(): UseSession {
     })
   }, [])
 
+  const toggleChordCombination = useCallback(
+    (type: SeventhChordType, inversion: SeventhChordInversion) => {
+      if (phaseRef.current === 'running') return
+      if (!isChordInversionAllowed(type, inversion)) return
+      const key = chordKey(type, inversion)
+      setSelectedChords((previous) =>
+        previous.includes(key)
+          ? previous.filter((value) => value !== key)
+          : [...previous, key],
+      )
+    },
+    [],
+  )
+
+  const toggleChordType = useCallback((type: SeventhChordType) => {
+    if (phaseRef.current === 'running') return
+    const typeKeys = chordInversionsFor(type).map((inversion) => chordKey(type, inversion))
+    setSelectedChords((previous) => {
+      const everySelected = typeKeys.every((key) => previous.includes(key))
+      if (everySelected) {
+        return previous.filter((key) => !typeKeys.includes(key))
+      }
+      return [...new Set([...previous, ...typeKeys])]
+    })
+  }, [])
+
   const goToSetup = useCallback(() => {
     resetToSetup('[Session] Powrót do ustawień.')
   }, [resetToSetup])
@@ -556,18 +681,32 @@ export function useSession(): UseSession {
       )
     }
 
-    return triadPool(selectedTriads).flatMap((key) => {
-      const parsed = parseTriadKey(key)
+    if (config.category === 'triads') {
+      return triadPool(selectedTriads).flatMap((key) => {
+        const parsed = parseTriadKey(key)
+        if (!parsed) return []
+        return [
+          {
+            key,
+            short: triadShortLabel(parsed.type, parsed.inversion),
+            name: triadLabel(parsed.type, parsed.inversion),
+          },
+        ]
+      })
+    }
+
+    return chordPool(selectedChords).flatMap((key) => {
+      const parsed = parseChordKey(key)
       if (!parsed) return []
       return [
         {
           key,
-          short: triadShortLabel(parsed.type, parsed.inversion),
-          name: triadLabel(parsed.type, parsed.inversion),
+          short: chordShortLabel(parsed.type, parsed.inversion),
+          name: chordLabel(parsed.type, parsed.inversion),
         },
       ]
     })
-  }, [config.category, selectedIntervals, selectedTriads])
+  }, [config.category, selectedIntervals, selectedTriads, selectedChords])
 
   const answered = correct + wrong
   const correctKey = question ? questionKey(question) : null
@@ -578,6 +717,7 @@ export function useSession(): UseSession {
     config,
     selectedIntervals,
     selectedTriads,
+    selectedChords,
     answerOptions,
     question,
     correctKey,
@@ -596,6 +736,8 @@ export function useSession(): UseSession {
     toggleInterval,
     toggleTriadCombination,
     toggleTriadType,
+    toggleChordCombination,
+    toggleChordType,
     start,
     answer,
     repeat,

@@ -1,3 +1,4 @@
+import { ChordSettings } from './components/ChordSettings'
 import { ResultsArea } from './components/ResultsArea'
 import { QuizArea } from './components/QuizArea'
 import { SessionSettings } from './components/SessionSettings'
@@ -42,7 +43,7 @@ function App() {
               onSelectTime={session.setSeconds}
               onSelectDirection={session.setDirection}
             />
-            {session.config.category === 'intervals' ? (
+            {session.config.category === 'intervals' && (
               <SessionSettings
                 config={session.config}
                 selected={session.selectedIntervals}
@@ -50,13 +51,24 @@ function App() {
                 onToggle={session.toggleInterval}
                 onStart={session.start}
               />
-            ) : (
+            )}
+            {session.config.category === 'triads' && (
               <TriadSettings
                 config={session.config}
                 selectedTriads={session.selectedTriads}
                 samplesStatus={session.samplesStatus}
                 onToggleCombination={session.toggleTriadCombination}
                 onToggleType={session.toggleTriadType}
+                onStart={session.start}
+              />
+            )}
+            {session.config.category === 'chords' && (
+              <ChordSettings
+                config={session.config}
+                selectedChords={session.selectedChords}
+                samplesStatus={session.samplesStatus}
+                onToggleCombination={session.toggleChordCombination}
+                onToggleType={session.toggleChordType}
                 onStart={session.start}
               />
             )}

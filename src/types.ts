@@ -1,6 +1,6 @@
 export type Phase = 'setup' | 'running' | 'results'
 
-export type Category = 'intervals' | 'triads'
+export type Category = 'intervals' | 'triads' | 'chords'
 
 export type SessionMode = 'count' | 'time'
 
@@ -13,6 +13,10 @@ export type DirectionSource = 'random' | 'chosen' | 'time'
 export type TriadType = 'maj' | 'min' | 'dim' | 'aug'
 
 export type TriadInversion = 'root' | 'first' | 'second'
+
+export type SeventhChordType = 'maj7' | 'm7' | 'dom7' | 'dim7' | 'm7b5'
+
+export type SeventhChordInversion = 'root' | 'first' | 'second' | 'third'
 
 export interface SessionConfig {
   category: Category
@@ -40,7 +44,17 @@ export interface TriadQuestion {
   directionSource: DirectionSource
 }
 
-export type Question = IntervalQuestion | TriadQuestion
+export interface ChordQuestion {
+  category: 'chords'
+  rootMidi: number
+  chordType: SeventhChordType
+  inversion: SeventhChordInversion
+  notes: number[]
+  playMode: PlayMode
+  directionSource: DirectionSource
+}
+
+export type Question = IntervalQuestion | TriadQuestion | ChordQuestion
 
 export interface Feedback {
   chosen: string

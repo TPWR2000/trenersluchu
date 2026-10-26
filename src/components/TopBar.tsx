@@ -1,10 +1,10 @@
 import { DIRECTION_OPTIONS } from '../data/directions'
 import type { Category, PlayDirection, SessionConfig } from '../types'
 
-const CATEGORIES: { value: Category | null; label: string; enabled: boolean }[] = [
+const CATEGORIES: { value: Category; label: string; enabled: boolean }[] = [
   { value: 'intervals', label: 'Interwały', enabled: true },
   { value: 'triads', label: 'Trójdźwięki', enabled: true },
-  { value: null, label: 'Akordy', enabled: false },
+  { value: 'chords', label: 'Akordy', enabled: true },
 ]
 
 const COUNT_OPTIONS = [10, 20, 50]
