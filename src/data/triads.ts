@@ -40,9 +40,24 @@ export const ALL_TRIAD_INVERSIONS: TriadInversion[] = TRIAD_INVERSIONS.map(
   (inversion) => inversion.value,
 )
 
+export function isTriadInversionAllowed(
+  type: TriadType,
+  inversion: TriadInversion,
+): boolean {
+  return type !== 'aug' || inversion === 'root'
+}
+
+export function triadInversionsFor(type: TriadType): TriadInversion[] {
+  return ALL_TRIAD_INVERSIONS.filter((inversion) => isTriadInversionAllowed(type, inversion))
+}
+
 export function triadKey(type: TriadType, inversion: TriadInversion): string {
   return `${type}:${inversion}`
 }
+
+export const ALL_TRIAD_COMBINATIONS: string[] = TRIAD_TYPES.flatMap((type) =>
+  triadInversionsFor(type.value).map((inversion) => triadKey(type.value, inversion)),
+)
 
 export function parseTriadKey(
   key: string,
@@ -78,16 +93,14 @@ export function triadShortLabel(type: TriadType, inversion: TriadInversion): str
   return `${TRIAD_TYPE_BY_VALUE[type].short} · ${TRIAD_INVERSION_BY_VALUE[inversion].short}`
 }
 
-export function triadPool(
-  types: TriadType[],
-  inversions: TriadInversion[],
-): string[] {
+export function triadPool(selectedKeys: Iterable<string>): string[] {
+  const selected = new Set(selectedKeys)
   const pool: string[] = []
   for (const type of TRIAD_TYPES) {
-    if (!types.includes(type.value)) continue
     for (const inversion of TRIAD_INVERSIONS) {
-      if (!inversions.includes(inversion.value)) continue
-      pool.push(triadKey(type.value, inversion.value))
+      if (!isTriadInversionAllowed(type.value, inversion.value)) continue
+      const key = triadKey(type.value, inversion.value)
+      if (selected.has(key)) pool.push(key)
     }
   }
   return pool

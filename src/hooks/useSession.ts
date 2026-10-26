@@ -22,11 +22,10 @@ import {
   parseIntervalKey,
 } from '../data/intervals'
 import {
-  ALL_TRIAD_INVERSIONS,
-  ALL_TRIAD_TYPES,
-  TRIAD_INVERSIONS,
-  TRIAD_TYPES,
+  ALL_TRIAD_COMBINATIONS,
+  isTriadInversionAllowed,
   parseTriadKey,
+  triadInversionsFor,
   triadKey,
   triadLabel,
   triadMidiNotes,
@@ -159,8 +158,7 @@ export interface UseSession {
   phase: Phase
   config: SessionConfig
   selectedIntervals: number[]
-  selectedTypes: TriadType[]
-  selectedInversions: TriadInversion[]
+  selectedTriads: string[]
   answerOptions: AnswerOption[]
   question: Question | null
   correctKey: string | null
@@ -177,8 +175,8 @@ export interface UseSession {
   setSeconds: (seconds: number) => void
   setDirection: (direction: PlayDirection) => void
   toggleInterval: (semitones: number) => void
+  toggleTriadCombination: (type: TriadType, inversion: TriadInversion) => void
   toggleTriadType: (type: TriadType) => void
-  toggleTriadInversion: (inversion: TriadInversion) => void
   start: () => void
   answer: (key: string) => void
   repeat: () => void
@@ -198,10 +196,7 @@ export function useSession(): UseSession {
     direction: 'random',
   })
   const [selectedIntervals, setSelectedIntervals] = useState<number[]>([...ALL_SEMITONES])
-  const [selectedTypes, setSelectedTypes] = useState<TriadType[]>([...ALL_TRIAD_TYPES])
-  const [selectedInversions, setSelectedInversions] = useState<TriadInversion[]>([
-    ...ALL_TRIAD_INVERSIONS,
-  ])
+  const [selectedTriads, setSelectedTriads] = useState<string[]>([...ALL_TRIAD_COMBINATIONS])
   const [question, setQuestion] = useState<Question | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [correct, setCorrect] = useState(0)
@@ -212,8 +207,7 @@ export function useSession(): UseSession {
 
   const configRef = useRef(config)
   const selectedIntervalsRef = useRef(selectedIntervals)
-  const selectedTypesRef = useRef(selectedTypes)
-  const selectedInversionsRef = useRef(selectedInversions)
+  const selectedTriadsRef = useRef(selectedTriads)
   const phaseRef = useRef(phase)
   const questionRef = useRef(question)
   const answeredRef = useRef(0)
@@ -232,12 +226,8 @@ export function useSession(): UseSession {
   }, [selectedIntervals])
 
   useEffect(() => {
-    selectedTypesRef.current = selectedTypes
-  }, [selectedTypes])
-
-  useEffect(() => {
-    selectedInversionsRef.current = selectedInversions
-  }, [selectedInversions])
+    selectedTriadsRef.current = selectedTriads
+  }, [selectedTriads])
 
   useEffect(() => {
     phaseRef.current = phase
@@ -327,7 +317,7 @@ export function useSession(): UseSession {
       return
     }
 
-    const pool = triadPool(selectedTypesRef.current, selectedInversionsRef.current)
+    const pool = triadPool(selectedTriadsRef.current)
     if (pool.length === 0) return
 
     let key = pool[Math.floor(Math.random() * pool.length)]
@@ -377,7 +367,7 @@ export function useSession(): UseSession {
     const poolEmpty =
       cfg.category === 'intervals'
         ? selectedIntervalsRef.current.length === 0
-        : selectedTypesRef.current.length === 0 || selectedInversionsRef.current.length === 0
+        : triadPool(selectedTriadsRef.current).length === 0
     if (poolEmpty) return
     if (getSamplesStatus() !== 'ready') {
       console.warn('[Session] Start odrzucony — sample pianina nie są jeszcze gotowe.')
@@ -511,20 +501,30 @@ export function useSession(): UseSession {
     )
   }, [])
 
+  const toggleTriadCombination = useCallback(
+    (type: TriadType, inversion: TriadInversion) => {
+      if (phaseRef.current === 'running') return
+      if (!isTriadInversionAllowed(type, inversion)) return
+      const key = triadKey(type, inversion)
+      setSelectedTriads((previous) =>
+        previous.includes(key)
+          ? previous.filter((value) => value !== key)
+          : [...previous, key],
+      )
+    },
+    [],
+  )
+
   const toggleTriadType = useCallback((type: TriadType) => {
     if (phaseRef.current === 'running') return
-    setSelectedTypes((previous) =>
-      previous.includes(type) ? previous.filter((value) => value !== type) : [...previous, type],
-    )
-  }, [])
-
-  const toggleTriadInversion = useCallback((inversion: TriadInversion) => {
-    if (phaseRef.current === 'running') return
-    setSelectedInversions((previous) =>
-      previous.includes(inversion)
-        ? previous.filter((value) => value !== inversion)
-        : [...previous, inversion],
-    )
+    const typeKeys = triadInversionsFor(type).map((inversion) => triadKey(type, inversion))
+    setSelectedTriads((previous) => {
+      const everySelected = typeKeys.every((key) => previous.includes(key))
+      if (everySelected) {
+        return previous.filter((key) => !typeKeys.includes(key))
+      }
+      return [...new Set([...previous, ...typeKeys])]
+    })
   }, [])
 
   const goToSetup = useCallback(() => {
@@ -556,20 +556,18 @@ export function useSession(): UseSession {
       )
     }
 
-    const options: AnswerOption[] = []
-    for (const type of TRIAD_TYPES) {
-      if (!selectedTypes.includes(type.value)) continue
-      for (const inversion of TRIAD_INVERSIONS) {
-        if (!selectedInversions.includes(inversion.value)) continue
-        options.push({
-          key: triadKey(type.value, inversion.value),
-          short: triadShortLabel(type.value, inversion.value),
-          name: triadLabel(type.value, inversion.value),
-        })
-      }
-    }
-    return options
-  }, [config.category, selectedIntervals, selectedTypes, selectedInversions])
+    return triadPool(selectedTriads).flatMap((key) => {
+      const parsed = parseTriadKey(key)
+      if (!parsed) return []
+      return [
+        {
+          key,
+          short: triadShortLabel(parsed.type, parsed.inversion),
+          name: triadLabel(parsed.type, parsed.inversion),
+        },
+      ]
+    })
+  }, [config.category, selectedIntervals, selectedTriads])
 
   const answered = correct + wrong
   const correctKey = question ? questionKey(question) : null
@@ -579,8 +577,7 @@ export function useSession(): UseSession {
     phase,
     config,
     selectedIntervals,
-    selectedTypes,
-    selectedInversions,
+    selectedTriads,
     answerOptions,
     question,
     correctKey,
@@ -597,8 +594,8 @@ export function useSession(): UseSession {
     setSeconds,
     setDirection,
     toggleInterval,
+    toggleTriadCombination,
     toggleTriadType,
-    toggleTriadInversion,
     start,
     answer,
     repeat,

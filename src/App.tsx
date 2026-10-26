@@ -53,11 +53,10 @@ function App() {
             ) : (
               <TriadSettings
                 config={session.config}
-                selectedTypes={session.selectedTypes}
-                selectedInversions={session.selectedInversions}
+                selectedTriads={session.selectedTriads}
                 samplesStatus={session.samplesStatus}
+                onToggleCombination={session.toggleTriadCombination}
                 onToggleType={session.toggleTriadType}
-                onToggleInversion={session.toggleTriadInversion}
                 onStart={session.start}
               />
             )}
