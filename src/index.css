@@ -3,15 +3,21 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-mono: 'JetBrains Mono', 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-mt-bg: #323437;
-  --color-mt-sub-alt: #2c2e31;
-  --color-mt-sub: #646669;
-  --color-mt-text: #d1d0c5;
-  --color-mt-accent: #e2b714;
-  --color-mt-success: #70a557;
-  --color-mt-error: #ca4754;
+  --color-mt-bg: #121316;
+  --color-mt-sub-alt: #1a1c23;
+  --color-mt-sub: #6b7078;
+  --color-mt-text: #e8e9ec;
+  --color-mt-border: #2a2d37;
+  --color-mt-accent: #ffd026;
+  --color-mt-success: #57b26a;
+  --color-mt-error: #e06c75;
+
+  --color-brand-300: #ffe08a;
+  --color-brand-400: #ffd026;
+  --color-brand-500: #e6b300;
 }
 
 /*
@@ -21,24 +27,32 @@
  */
 :root {
   color-scheme: light;
-  --color-mt-bg: #ffffff;
+  --color-mt-bg: #f7f7f5;
   --color-mt-sub-alt: #f4f4f5;
   --color-mt-sub: #71717a;
   --color-mt-text: #18181b;
-  --color-mt-accent: #b8860b;
+  --color-mt-border: #e4e4e7;
+  --color-mt-accent: #d9a514;
   --color-mt-success: #15803d;
   --color-mt-error: #b91c1c;
+  --color-brand-300: #ffe08a;
+  --color-brand-400: #e6b300;
+  --color-brand-500: #d4a017;
 }
 
 .dark {
   color-scheme: dark;
-  --color-mt-bg: #323437;
-  --color-mt-sub-alt: #2c2e31;
-  --color-mt-sub: #646669;
-  --color-mt-text: #d1d0c5;
-  --color-mt-accent: #e2b714;
-  --color-mt-success: #70a557;
-  --color-mt-error: #ca4754;
+  --color-mt-bg: #121316;
+  --color-mt-sub-alt: #1a1c23;
+  --color-mt-sub: #6b7078;
+  --color-mt-text: #e8e9ec;
+  --color-mt-border: #2a2d37;
+  --color-mt-accent: #ffd026;
+  --color-mt-success: #57b26a;
+  --color-mt-error: #e06c75;
+  --color-brand-300: #ffe08a;
+  --color-brand-400: #ffd026;
+  --color-brand-500: #e6b300;
 }
 
 html,
@@ -51,6 +65,7 @@ body {
   margin: 0;
   background-color: var(--color-mt-bg);
   color: var(--color-mt-text);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 300ms ease, color 300ms ease;
