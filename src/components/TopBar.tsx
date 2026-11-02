@@ -1,5 +1,6 @@
 import { DIRECTION_OPTIONS } from '../data/directions'
 import type { Category, PlayDirection, SessionConfig } from '../types'
+import { ThemeToggle } from './ThemeToggle'
 
 const CATEGORIES: { value: Category; label: string; enabled: boolean }[] = [
   { value: 'intervals', label: 'Interwały', enabled: true },
@@ -13,6 +14,8 @@ const TIME_OPTIONS = [15, 30, 60]
 interface TopBarProps {
   config: SessionConfig
   locked: boolean
+  isDark: boolean
+  onToggleTheme: () => void
   onSelectCategory: (category: Category) => void
   onSelectCount: (count: number) => void
   onSelectTime: (seconds: number) => void
@@ -22,6 +25,8 @@ interface TopBarProps {
 export function TopBar({
   config,
   locked,
+  isDark,
+  onToggleTheme,
   onSelectCategory,
   onSelectCount,
   onSelectTime,
@@ -45,14 +50,19 @@ export function TopBar({
   const groupClass = 'flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3'
 
   return (
-    <header className="flex flex-col items-center gap-6">
-      <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:items-baseline sm:gap-3">
-        <span className="text-xl font-bold tracking-tight text-mt-accent sm:text-2xl">
-          trener&nbsp;słuchu
-        </span>
-        <span className="text-[10px] uppercase tracking-[0.3em] text-mt-sub sm:text-xs">
-          ear trainer
-        </span>
+    <header className="flex w-full flex-col items-center gap-6">
+      <div className="flex w-full max-w-3xl items-center justify-between gap-3">
+        <div className="flex flex-1 justify-center">
+          <div className="flex flex-col items-center gap-1 text-center sm:flex-row sm:items-baseline sm:gap-3">
+            <span className="text-xl font-bold tracking-tight text-mt-accent sm:text-2xl">
+              trener&nbsp;słuchu
+            </span>
+            <span className="text-[10px] uppercase tracking-[0.3em] text-mt-sub sm:text-xs">
+              ear trainer
+            </span>
+          </div>
+        </div>
+        <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
       </div>
 
       <nav className="flex w-full flex-wrap items-center justify-center gap-x-5 gap-y-1 text-sm">

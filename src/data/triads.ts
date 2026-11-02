@@ -47,8 +47,8 @@ export function isTriadInversionAllowed(
   return type !== 'aug' || inversion === 'root'
 }
 
-export function triadInversionsFor(type: TriadType): TriadInversion[] {
-  return ALL_TRIAD_INVERSIONS.filter((inversion) => isTriadInversionAllowed(type, inversion))
+export function triadInversionsFor(type: TriadType): TriadInversionOption[] {
+  return TRIAD_INVERSIONS.filter((inversion) => isTriadInversionAllowed(type, inversion.value))
 }
 
 export function triadKey(type: TriadType, inversion: TriadInversion): string {
@@ -56,7 +56,7 @@ export function triadKey(type: TriadType, inversion: TriadInversion): string {
 }
 
 export const ALL_TRIAD_COMBINATIONS: string[] = TRIAD_TYPES.flatMap((type) =>
-  triadInversionsFor(type.value).map((inversion) => triadKey(type.value, inversion)),
+  triadInversionsFor(type.value).map((inversion) => triadKey(type.value, inversion.value)),
 )
 
 export function parseTriadKey(
@@ -90,7 +90,8 @@ export function triadLabel(type: TriadType, inversion: TriadInversion): string {
 }
 
 export function triadShortLabel(type: TriadType, inversion: TriadInversion): string {
-  return `${TRIAD_TYPE_BY_VALUE[type].short} · ${TRIAD_INVERSION_BY_VALUE[inversion].short}`
+  const inversionMarker = TRIAD_INVERSION_BY_VALUE[inversion].short
+  return `${TRIAD_TYPE_BY_VALUE[type].short} (${inversionMarker})`
 }
 
 export function triadPool(selectedKeys: Iterable<string>): string[] {

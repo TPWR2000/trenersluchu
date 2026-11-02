@@ -5,9 +5,11 @@ import { SessionSettings } from './components/SessionSettings'
 import { TriadSettings } from './components/TriadSettings'
 import { TopBar } from './components/TopBar'
 import { useSession } from './hooks/useSession'
+import { useTheme } from './hooks/useTheme'
 
 function App() {
   const session = useSession()
+  const { isDark, toggleTheme } = useTheme()
 
   if (session.phase === 'running') {
     return (
@@ -22,6 +24,8 @@ function App() {
           wrong={session.wrong}
           answered={session.answered}
           timeLeft={session.timeLeft}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
           onAnswer={session.answer}
           onRepeat={session.repeat}
           onQuit={session.quit}
@@ -38,6 +42,8 @@ function App() {
             <TopBar
               config={session.config}
               locked={false}
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
               onSelectCategory={session.setCategory}
               onSelectCount={session.setCount}
               onSelectTime={session.setSeconds}
@@ -45,7 +51,6 @@ function App() {
             />
             {session.config.category === 'intervals' && (
               <SessionSettings
-                config={session.config}
                 selected={session.selectedIntervals}
                 samplesStatus={session.samplesStatus}
                 onToggle={session.toggleInterval}
@@ -54,7 +59,6 @@ function App() {
             )}
             {session.config.category === 'triads' && (
               <TriadSettings
-                config={session.config}
                 selectedTriads={session.selectedTriads}
                 samplesStatus={session.samplesStatus}
                 onToggleCombination={session.toggleTriadCombination}
@@ -64,7 +68,6 @@ function App() {
             )}
             {session.config.category === 'chords' && (
               <ChordSettings
-                config={session.config}
                 selectedChords={session.selectedChords}
                 samplesStatus={session.samplesStatus}
                 onToggleCombination={session.toggleChordCombination}
@@ -81,6 +84,8 @@ function App() {
             correct={session.correct}
             wrong={session.wrong}
             history={session.history}
+            isDark={isDark}
+            onToggleTheme={toggleTheme}
             onNewSession={session.goToSetup}
             onReplayTask={session.replayTask}
           />

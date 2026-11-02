@@ -1,4 +1,5 @@
 import type { AnswerOption, Feedback, Question, SessionConfig } from '../types'
+import { ThemeToggle } from './ThemeToggle'
 
 function SpeakerIcon({ className }: { className?: string }) {
   return (
@@ -49,6 +50,8 @@ interface QuizAreaProps {
   wrong: number
   answered: number
   timeLeft: number
+  isDark: boolean
+  onToggleTheme: () => void
   onAnswer: (key: string) => void
   onRepeat: () => void
   onQuit: () => void
@@ -64,6 +67,8 @@ export function QuizArea({
   wrong,
   answered,
   timeLeft,
+  isDark,
+  onToggleTheme,
   onAnswer,
   onRepeat,
   onQuit,
@@ -71,9 +76,9 @@ export function QuizArea({
   const locked = feedback !== null
   const isTimeMode = config.mode === 'time'
   const secondsLeft = Math.ceil(timeLeft / 1000)
-  const counterValue = isTimeMode
-    ? `${secondsLeft}s`
-    : `${Math.min(answered + (locked ? 0 : 1), config.count)}/${config.count}`
+  const taskTotal = Math.max(config.count, 1)
+  const taskProgress = Math.min(answered + (locked ? 0 : 1), taskTotal)
+  const counterValue = isTimeMode ? `${secondsLeft}s` : `${taskProgress}/${taskTotal}`
   const counterLabel = isTimeMode ? 'Czas' : 'Zadanie'
   const urgent = isTimeMode && secondsLeft <= 10
 
@@ -89,10 +94,7 @@ export function QuizArea({
     return 'border-mt-sub/40 text-mt-text hover:border-mt-accent hover:text-mt-accent active:bg-mt-accent/10'
   }
 
-  const gridCols =
-    answerOptions.length <= 4
-      ? 'grid-cols-2'
-      : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
+  const gridCols = 'grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5'
 
   const replayDisabled = locked || !question
 
@@ -117,6 +119,7 @@ export function QuizArea({
             <span className="px-1 opacity-50">/</span>
             <span className="text-mt-error">{wrong}</span>
           </span>
+          <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
           <button
             type="button"
             onClick={onQuit}
@@ -135,14 +138,21 @@ export function QuizArea({
           onClick={onRepeat}
           disabled={replayDisabled}
           aria-label="Odtwórz ponownie"
+          title="Odtwórz ponownie"
           className={[
-            'flex h-28 w-28 touch-manipulation items-center justify-center rounded-full transition-transform duration-150 sm:h-32 sm:w-32',
-            replayDisabled
-              ? 'cursor-not-allowed bg-mt-sub/20 text-mt-sub'
-              : 'bg-mt-accent text-mt-bg hover:bg-mt-accent/85 active:scale-95',
+            'relative flex h-36 w-full max-w-64 touch-manipulation items-center justify-center rounded-3xl border border-neutral-800 bg-mt-accent/10 px-4 transition-all duration-200 outline-none sm:h-40',
+            replayDisabled ? 'opacity-70' : 'hover:-translate-y-0.5',
           ].join(' ')}
         >
-          <SpeakerIcon className="h-14 w-14 sm:h-16 sm:w-16" />
+          {!replayDisabled && (
+            <span
+              className="absolute inset-0 animate-pulse rounded-3xl bg-mt-accent/10"
+              aria-hidden="true"
+            />
+          )}
+          <SpeakerIcon
+            className={`relative h-14 w-14 sm:h-16 sm:w-16 ${replayDisabled ? 'text-mt-sub' : 'text-mt-accent'}`}
+          />
         </button>
 
         <span className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-mt-sub">
@@ -170,13 +180,15 @@ export function QuizArea({
             disabled={locked}
             onClick={() => onAnswer(option.key)}
             className={[
-              'flex min-h-12 touch-manipulation flex-col items-center justify-center gap-0.5 rounded border px-3 py-2 transition-colors duration-150 outline-none',
+              'flex min-h-12 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl border border-neutral-800 dark:border-neutral-700 bg-transparent p-2 transition-all duration-200 outline-none hover:-translate-y-0.5',
               locked ? 'cursor-not-allowed' : '',
               answerClass(option.key),
             ].join(' ')}
           >
             <span className="text-lg font-bold leading-none">{option.short}</span>
-            <span className="text-[11px] leading-tight">{option.name}</span>
+            <span className="text-xs leading-tight text-neutral-400 dark:text-neutral-400">
+              {option.name}
+            </span>
           </button>
         ))}
       </div>

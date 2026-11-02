@@ -8,9 +8,9 @@ export interface SeventhChordOption {
 }
 
 export const SEVENTH_CHORDS: SeventhChordOption[] = [
-  { value: 'maj7', short: 'maj7', name: 'Durowy septymowy', intervals: [0, 4, 7, 11] },
-  { value: 'm7', short: 'm7', name: 'Molowy septymowy', intervals: [0, 3, 7, 10] },
-  { value: 'dom7', short: '7', name: 'Dominanta septymowa', intervals: [0, 4, 7, 10] },
+  { value: 'maj7', short: 'dur7', name: 'Durowy septymowy', intervals: [0, 4, 7, 11] },
+  { value: 'm7', short: 'moll7', name: 'Molowy septymowy', intervals: [0, 3, 7, 10] },
+  { value: 'dom7', short: 'D7', name: 'Dominanta septymowa', intervals: [0, 4, 7, 10] },
   { value: 'm7b5', short: 'm7b5', name: 'Półzmniejszony septymowy', intervals: [0, 3, 6, 10] },
   { value: 'dim7', short: 'dim7', name: 'Zmniejszony septymowy', intervals: [0, 3, 6, 9] },
 ]
@@ -30,7 +30,7 @@ export interface SeventhChordInversionOption {
 }
 
 export const CHORD_INVERSIONS: SeventhChordInversionOption[] = [
-  { value: 'root', short: 'Zas.', name: 'Postać zasadnicza' },
+  { value: 'root', short: 'Zas.', name: 'Zasadniczy' },
   { value: 'first', short: 'I', name: 'I przewrót' },
   { value: 'second', short: 'II', name: 'II przewrót' },
   { value: 'third', short: 'III', name: 'III przewrót' },
@@ -51,8 +51,8 @@ export function isChordInversionAllowed(
   return type !== 'dim7' || inversion === 'root'
 }
 
-export function chordInversionsFor(type: SeventhChordType): SeventhChordInversion[] {
-  return ALL_CHORD_INVERSIONS.filter((inversion) => isChordInversionAllowed(type, inversion))
+export function chordInversionsFor(type: SeventhChordType): SeventhChordInversionOption[] {
+  return CHORD_INVERSIONS.filter((inversion) => isChordInversionAllowed(type, inversion.value))
 }
 
 export function chordKey(type: SeventhChordType, inversion: SeventhChordInversion): string {
@@ -60,7 +60,7 @@ export function chordKey(type: SeventhChordType, inversion: SeventhChordInversio
 }
 
 export const ALL_CHORD_COMBINATIONS: string[] = SEVENTH_CHORDS.flatMap((chord) =>
-  chordInversionsFor(chord.value).map((inversion) => chordKey(chord.value, inversion)),
+  chordInversionsFor(chord.value).map((inversion) => chordKey(chord.value, inversion.value)),
 )
 
 export function parseChordKey(
@@ -100,16 +100,16 @@ export function chordLabel(
 ): string {
   const chord = SEVENTH_CHORD_BY_VALUE[type]
   const inversionLabel = CHORD_INVERSION_BY_VALUE[inversion].name
-  return `${chord.name} (${chord.short}) · ${inversionLabel}`
+  return `${chord.name} · ${inversionLabel}`
 }
 
 export function chordShortLabel(
   type: SeventhChordType,
   inversion: SeventhChordInversion,
 ): string {
+  const inversionMarker = CHORD_INVERSION_BY_VALUE[inversion].short
   const chord = SEVENTH_CHORD_BY_VALUE[type]
-  const inversionLabel = CHORD_INVERSION_BY_VALUE[inversion].short
-  return `${chord.short} · ${inversionLabel}`
+  return `${chord.short} (${inversionMarker})`
 }
 
 export function chordPool(selectedKeys: Iterable<string>): string[] {

@@ -616,7 +616,7 @@ export function useSession(): UseSession {
 
   const toggleTriadType = useCallback((type: TriadType) => {
     if (phaseRef.current === 'running') return
-    const typeKeys = triadInversionsFor(type).map((inversion) => triadKey(type, inversion))
+    const typeKeys = triadInversionsFor(type).map((inversion) => triadKey(type, inversion.value))
     setSelectedTriads((previous) => {
       const everySelected = typeKeys.every((key) => previous.includes(key))
       if (everySelected) {
@@ -642,7 +642,7 @@ export function useSession(): UseSession {
 
   const toggleChordType = useCallback((type: SeventhChordType) => {
     if (phaseRef.current === 'running') return
-    const typeKeys = chordInversionsFor(type).map((inversion) => chordKey(type, inversion))
+    const typeKeys = chordInversionsFor(type).map((inversion) => chordKey(type, inversion.value))
     setSelectedChords((previous) => {
       const everySelected = typeKeys.every((key) => previous.includes(key))
       if (everySelected) {

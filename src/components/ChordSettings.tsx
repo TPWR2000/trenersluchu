@@ -1,17 +1,9 @@
 import type { SamplesStatus } from '../audio/engine'
-import {
-  CHORD_INVERSIONS,
-  SEVENTH_CHORDS,
-  chordInversionsFor,
-  chordKey,
-  chordPool,
-  isChordInversionAllowed,
-} from '../data/chords'
-import type { SessionConfig, SeventhChordInversion, SeventhChordType } from '../types'
+import { SEVENTH_CHORDS, chordInversionsFor, chordKey, chordPool } from '../data/chords'
+import type { SeventhChordInversion, SeventhChordType } from '../types'
 import { StartControls } from './StartControls'
 
 interface ChordSettingsProps {
-  config: SessionConfig
   selectedChords: string[]
   samplesStatus: SamplesStatus
   onToggleCombination: (type: SeventhChordType, inversion: SeventhChordInversion) => void
@@ -20,7 +12,6 @@ interface ChordSettingsProps {
 }
 
 export function ChordSettings({
-  config,
   selectedChords,
   samplesStatus,
   onToggleCombination,
@@ -30,34 +21,27 @@ export function ChordSettings({
   const selected = new Set(selectedChords)
   const combinations = chordPool(selectedChords).length
   const noneSelected = combinations === 0
-  const timeMode = config.mode === 'time'
-  const modeLabel = timeMode ? `${config.seconds}s` : `${config.count} zadań`
   const hint = 'Wszystkie dźwięki odtwarzane są jednocześnie (harmonicznie).'
 
-  const optionClass = (active: boolean, disabled = false) =>
+  const optionClass = (active: boolean) =>
     [
-      'flex min-h-12 touch-manipulation flex-col items-center justify-center gap-0.5 rounded border px-2 py-1.5 transition-colors duration-150 outline-none',
-      disabled
-        ? 'cursor-not-allowed border-mt-sub/15 text-mt-sub/30'
-        : active
-          ? 'border-mt-accent bg-mt-accent/10 text-mt-accent'
-          : 'border-mt-sub/40 text-mt-sub hover:border-mt-text/60 hover:text-mt-text active:bg-mt-sub/10',
+      'flex min-h-12 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl border border-neutral-800 dark:border-neutral-700 bg-transparent px-2 py-1.5 transition-all duration-200 outline-none',
+      active
+        ? 'border-mt-accent bg-mt-accent/10 text-mt-accent'
+        : 'text-mt-sub hover:border-mt-text/60 hover:text-mt-text hover:-translate-y-0.5',
     ].join(' ')
 
   return (
     <section className="flex flex-col gap-6">
       <div className="text-center">
         <h1 className="text-xl font-bold text-mt-text">Zakres akordów septymowych</h1>
-        <p className="mt-1 text-sm text-mt-sub">
-          Wybierz konkretne warianty (typ + przewrót) do ćwiczenia · {modeLabel}
-        </p>
       </div>
 
       <div className="flex flex-col gap-3">
         {SEVENTH_CHORDS.map((chord) => {
           const allowedInversions = chordInversionsFor(chord.value)
           const activeCount = allowedInversions.filter((inversion) =>
-            selected.has(chordKey(chord.value, inversion)),
+            selected.has(chordKey(chord.value, inversion.value)),
           ).length
           const allActive = activeCount === allowedInversions.length
           const typeActive = activeCount > 0
@@ -95,33 +79,29 @@ export function ChordSettings({
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {CHORD_INVERSIONS.map((inversion) => {
-                  const allowed = isChordInversionAllowed(chord.value, inversion.value)
+              <div
+                className={
+                  allowedInversions.length <= 1
+                    ? 'grid grid-cols-1 gap-2'
+                    : 'grid grid-cols-2 gap-2 sm:grid-cols-4'
+                }
+              >
+                {allowedInversions.map((inversion) => {
                   const key = chordKey(chord.value, inversion.value)
-                  const active = allowed && selected.has(key)
+                  const active = selected.has(key)
 
                   return (
                     <button
                       key={inversion.value}
                       type="button"
                       aria-pressed={active}
-                      disabled={!allowed}
-                      title={
-                        allowed
-                          ? undefined
-                          : 'Akord zmniejszony septymowy w przewrotach brzmi identycznie jak w postaci zasadniczej.'
-                      }
                       onClick={() => onToggleCombination(chord.value, inversion.value)}
-                      className={optionClass(active, !allowed)}
+                      className={optionClass(active)}
                     >
-                      <span className="text-sm font-bold leading-none">{inversion.short}</span>
+                      <span className="text-sm font-bold leading-none">
+                        {chord.short} ({inversion.short})
+                      </span>
                       <span className="text-[10px] leading-tight">{inversion.name}</span>
-                      {!allowed && (
-                        <span className="text-[9px] uppercase leading-none tracking-wider">
-                          niedostępny
-                        </span>
-                      )}
                     </button>
                   )
                 })}

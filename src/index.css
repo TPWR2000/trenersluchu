@@ -1,8 +1,37 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-mono: 'JetBrains Mono', 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
+  --color-mt-bg: #323437;
+  --color-mt-sub-alt: #2c2e31;
+  --color-mt-sub: #646669;
+  --color-mt-text: #d1d0c5;
+  --color-mt-accent: #e2b714;
+  --color-mt-success: #70a557;
+  --color-mt-error: #ca4754;
+}
+
+/*
+ * Wartości trybu jasnego — w zastosowaniu na :root (poza warstwą theme
+ * wygenerowaną przez Tailwinda), dzięki unlayered CSS mają pierwszeństwo
+ * nad domyślnymi tokenami z @theme.
+ */
+:root {
+  color-scheme: light;
+  --color-mt-bg: #ffffff;
+  --color-mt-sub-alt: #f4f4f5;
+  --color-mt-sub: #71717a;
+  --color-mt-text: #18181b;
+  --color-mt-accent: #b8860b;
+  --color-mt-success: #15803d;
+  --color-mt-error: #b91c1c;
+}
+
+.dark {
+  color-scheme: dark;
   --color-mt-bg: #323437;
   --color-mt-sub-alt: #2c2e31;
   --color-mt-sub: #646669;
@@ -24,4 +53,10 @@ body {
   color: var(--color-mt-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 300ms ease, color 300ms ease;
+}
+
+::selection {
+  background-color: var(--color-mt-accent);
+  color: var(--color-mt-bg);
 }

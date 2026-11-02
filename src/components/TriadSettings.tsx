@@ -1,17 +1,9 @@
 import type { SamplesStatus } from '../audio/engine'
-import {
-  TRIAD_INVERSIONS,
-  TRIAD_TYPES,
-  isTriadInversionAllowed,
-  triadInversionsFor,
-  triadKey,
-  triadPool,
-} from '../data/triads'
-import type { SessionConfig, TriadInversion, TriadType } from '../types'
+import { TRIAD_TYPES, triadInversionsFor, triadKey, triadPool } from '../data/triads'
+import type { TriadInversion, TriadType } from '../types'
 import { StartControls } from './StartControls'
 
 interface TriadSettingsProps {
-  config: SessionConfig
   selectedTriads: string[]
   samplesStatus: SamplesStatus
   onToggleCombination: (type: TriadType, inversion: TriadInversion) => void
@@ -20,7 +12,6 @@ interface TriadSettingsProps {
 }
 
 export function TriadSettings({
-  config,
   selectedTriads,
   samplesStatus,
   onToggleCombination,
@@ -30,34 +21,27 @@ export function TriadSettings({
   const selected = new Set(selectedTriads)
   const combinations = triadPool(selectedTriads).length
   const noneSelected = combinations === 0
-  const timeMode = config.mode === 'time'
-  const modeLabel = timeMode ? `${config.seconds}s` : `${config.count} zadań`
   const hint = 'Wszystkie dźwięki odtwarzane są jednocześnie (harmonicznie).'
 
-  const optionClass = (active: boolean, disabled = false) =>
+  const optionClass = (active: boolean) =>
     [
-      'flex min-h-12 touch-manipulation flex-col items-center justify-center gap-0.5 rounded border px-2 py-1.5 transition-colors duration-150 outline-none',
-      disabled
-        ? 'cursor-not-allowed border-mt-sub/15 text-mt-sub/30'
-        : active
-          ? 'border-mt-accent bg-mt-accent/10 text-mt-accent'
-          : 'border-mt-sub/40 text-mt-sub hover:border-mt-text/60 hover:text-mt-text active:bg-mt-sub/10',
+      'flex min-h-12 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl border border-neutral-800 dark:border-neutral-700 bg-transparent px-2 py-1.5 transition-all duration-200 outline-none',
+      active
+        ? 'border-mt-accent bg-mt-accent/10 text-mt-accent'
+        : 'text-mt-sub hover:border-mt-text/60 hover:text-mt-text hover:-translate-y-0.5',
     ].join(' ')
 
   return (
     <section className="flex flex-col gap-6">
       <div className="text-center">
         <h1 className="text-xl font-bold text-mt-text">Zakres trójdźwięków</h1>
-        <p className="mt-1 text-sm text-mt-sub">
-          Wybierz konkretne warianty (typ + przewrót) do ćwiczenia · {modeLabel}
-        </p>
       </div>
 
       <div className="flex flex-col gap-3">
         {TRIAD_TYPES.map((type) => {
           const allowedInversions = triadInversionsFor(type.value)
           const activeCount = allowedInversions.filter((inversion) =>
-            selected.has(triadKey(type.value, inversion)),
+            selected.has(triadKey(type.value, inversion.value)),
           ).length
           const allActive = activeCount === allowedInversions.length
           const typeActive = activeCount > 0
@@ -95,33 +79,25 @@ export function TriadSettings({
                 </span>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {TRIAD_INVERSIONS.map((inversion) => {
-                  const allowed = isTriadInversionAllowed(type.value, inversion.value)
+              <div
+                className={`grid gap-2 ${allowedInversions.length <= 1 ? 'grid-cols-1' : 'grid-cols-3'}`}
+              >
+                {allowedInversions.map((inversion) => {
                   const key = triadKey(type.value, inversion.value)
-                  const active = allowed && selected.has(key)
+                  const active = selected.has(key)
 
                   return (
                     <button
                       key={inversion.value}
                       type="button"
                       aria-pressed={active}
-                      disabled={!allowed}
-                      title={
-                        allowed
-                          ? undefined
-                          : 'Trójdźwięk zwiększony w przewrotach brzmi identycznie jak w postaci zasadniczej.'
-                      }
                       onClick={() => onToggleCombination(type.value, inversion.value)}
-                      className={optionClass(active, !allowed)}
+                      className={optionClass(active)}
                     >
-                      <span className="text-sm font-bold leading-none">{inversion.short}</span>
+                      <span className="text-sm font-bold leading-none">
+                        {type.short} ({inversion.short})
+                      </span>
                       <span className="text-[10px] leading-tight">{inversion.name}</span>
-                      {!allowed && (
-                        <span className="text-[9px] uppercase leading-none tracking-wider">
-                          niedostępny
-                        </span>
-                      )}
                     </button>
                   )
                 })}

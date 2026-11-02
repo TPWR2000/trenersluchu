@@ -1,5 +1,6 @@
 import { PLAY_MODE_GLYPHS, PLAY_MODE_LABELS } from '../data/directions'
 import type { SessionConfig, TaskResult } from '../types'
+import { ThemeToggle } from './ThemeToggle'
 
 function SpeakerIcon({ className }: { className?: string }) {
   return (
@@ -25,6 +26,8 @@ interface ResultsAreaProps {
   correct: number
   wrong: number
   history: TaskResult[]
+  isDark: boolean
+  onToggleTheme: () => void
   onNewSession: () => void
   onReplayTask: (task: TaskResult) => void
 }
@@ -34,6 +37,8 @@ export function ResultsArea({
   correct,
   wrong,
   history,
+  isDark,
+  onToggleTheme,
   onNewSession,
   onReplayTask,
 }: ResultsAreaProps) {
@@ -47,6 +52,10 @@ export function ResultsArea({
 
   return (
     <section className="flex flex-col gap-6">
+      <div className="flex justify-end">
+        <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
+      </div>
+
       <div className="text-center">
         <p className="text-xs uppercase tracking-[0.3em] text-mt-sub">
           {config.mode === 'count' ? 'Koniec sesji' : `Wynik w ${config.seconds}s`}
