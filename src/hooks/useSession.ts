@@ -329,7 +329,12 @@ export function useSession(): UseSession {
       setFeedback(null)
       setQuestion(null)
       questionRef.current = null
+      setCorrect(0)
+      setWrong(0)
+      answeredRef.current = 0
       setTimeLeft(0)
+      endAtRef.current = 0
+      startedAtRef.current = 0
       setHistory([])
       setPhase('setup')
       console.log(message)
@@ -667,9 +672,6 @@ export function useSession(): UseSession {
   }, [])
 
   const goToSetup = useCallback(() => {
-    const defaults = getSessionDefaults()
-    configRef.current = defaults
-    setConfig(defaults)
     resetToSetup('[Session] Powrót do ustawień.')
   }, [resetToSetup])
 
