@@ -3,6 +3,7 @@ import {
   DIRECTION_SOURCE_LABELS,
   PLAY_MODE_LABELS,
 } from '../data/directions'
+import { getSequenceGapPreference, SEQUENCE_GAP_KEY } from '../data/preferences'
 import type { DirectionSource, PlayMode } from '../types'
 
 export type SamplesStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -30,7 +31,7 @@ const PIANO_URLS = {
 
 const HARMONIC_DURATION = '2n' //1n oznacza całąnute 2n półnute i itp
 const SEQUENCE_NOTE_DURATION = '4n'
-const SEQUENCE_GAP = 0.35
+let sequenceGap = getSequenceGapPreference()
 
 let sampler: Tone.Sampler | null = null
 let samplesStatus: SamplesStatus = 'idle'
@@ -44,6 +45,14 @@ function setStatus(next: SamplesStatus): void {
 
 export function getSamplesStatus(): SamplesStatus {
   return samplesStatus
+}
+
+export function setSequenceGap(seconds: number): void {
+  if (!Number.isFinite(seconds) || seconds < 0.1 || seconds > 1) {
+    throw new RangeError('Odstęp między nutami musi wynosić od 0,1 do 1 sekundy.')
+  }
+  sequenceGap = seconds
+  window.localStorage.setItem(SEQUENCE_GAP_KEY, String(seconds))
 }
 
 export function subscribeSamplesStatus(listener: (status: SamplesStatus) => void): () => void {
@@ -127,7 +136,7 @@ export function playNotes(request: PlaybackRequest): void {
   const orderedNames = request.playMode === 'desc' ? [...noteNames].reverse() : noteNames
   const start = Tone.now()
   orderedNames.forEach((note, index) => {
-    sampler?.triggerAttackRelease(note, SEQUENCE_NOTE_DURATION, start + index * SEQUENCE_GAP)
+    sampler?.triggerAttackRelease(note, SEQUENCE_NOTE_DURATION, start + index * sequenceGap)
   })
 }
 

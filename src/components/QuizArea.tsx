@@ -1,3 +1,4 @@
+import {useEffect} from 'react'
 import type {AnswerOption, Feedback, Question, SessionConfig} from '../types'
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faVolumeHigh, faXmark} from '@fortawesome/free-solid-svg-icons'
@@ -44,6 +45,32 @@ export function QuizArea({
     const counterValue = isTimeMode ? `${secondsLeft}s` : `${taskProgress}/${taskTotal}`
     const counterLabel = isTimeMode ? 'Czas' : 'Zadanie'
     const urgent = isTimeMode && secondsLeft <= 10
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.altKey || event.ctrlKey || event.metaKey) return
+
+            if (event.key === 'Enter') {
+                event.preventDefault()
+                onRepeat()
+                return
+            }
+            if (event.key === 'Escape') {
+                event.preventDefault()
+                onQuit()
+                return
+            }
+            if (/^[1-9]$/.test(event.key)) {
+                const option = answerOptions[Number(event.key) - 1]
+                if (!option) return
+                event.preventDefault()
+                onAnswer(option.key)
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [answerOptions, onAnswer, onQuit, onRepeat])
 
     const answerClass = (key: string) => {
         if (feedback && feedback.chosen === key) {

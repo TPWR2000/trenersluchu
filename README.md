@@ -16,6 +16,8 @@ Nowoczesna, responsywna aplikacja internetowa do treningu słuchu muzycznego, st
     - `W dół` (zstępująco)
     - `Harmonicznie` (obie nuty naraz)
     - `Losowo` (mix wyżej wymienionych)
+- **Moduły ćwiczeń:** interwały, trójdźwięki i czterodźwięki septymowe.
+- **Widoki Ustawienia i Informacje:** zapis domyślnych parametrów sesji, regulacja odstępu sekwencji oraz opis ćwiczeń i skrótów klawiszowych.
 - **Konfiguracja zakresu:** Użytkownik może samodzielnie decydować, które interwały mają pojawiać się w sesji (od Prymy czystej do Oktawy).
 - **Ekran podsumowania w stylu Monkeytype:**
     - Przejrzysta lista wszystkich zadań z sesji.

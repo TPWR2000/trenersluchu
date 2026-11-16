@@ -61,6 +61,7 @@ import type {
   TriadInversion,
   TriadType,
 } from '../types'
+import { getSessionDefaults, type SessionDefaults } from '../data/preferences'
 
 const FEEDBACK_MS = 450
 const ROOT_MIN_MIDI = 57
@@ -229,7 +230,10 @@ export interface UseSession {
   setCount: (count: number) => void
   setSeconds: (seconds: number) => void
   setDirection: (direction: PlayDirection) => void
+  applyDefaults: (defaults: SessionDefaults) => void
   toggleInterval: (semitones: number) => void
+  selectAllIntervals: () => void
+  clearIntervals: () => void
   toggleTriadCombination: (type: TriadType, inversion: TriadInversion) => void
   toggleTriadType: (type: TriadType) => void
   toggleChordCombination: (type: SeventhChordType, inversion: SeventhChordInversion) => void
@@ -245,13 +249,7 @@ export interface UseSession {
 
 export function useSession(): UseSession {
   const [phase, setPhase] = useState<Phase>('setup')
-  const [config, setConfig] = useState<SessionConfig>({
-    category: 'intervals',
-    mode: 'count',
-    count: 10,
-    seconds: 60,
-    direction: 'random',
-  })
+  const [config, setConfig] = useState<SessionConfig>(getSessionDefaults)
   const [selectedIntervals, setSelectedIntervals] = useState<number[]>([...ALL_SEMITONES])
   const [selectedTriads, setSelectedTriads] = useState<string[]>([...ALL_TRIAD_COMBINATIONS])
   const [selectedChords, setSelectedChords] = useState<string[]>([...ALL_CHORD_COMBINATIONS])
@@ -591,6 +589,12 @@ export function useSession(): UseSession {
     setConfig((previous) => ({ ...previous, direction }))
   }, [])
 
+  const applyDefaults = useCallback((defaults: SessionDefaults) => {
+    if (phaseRef.current !== 'setup') return
+    configRef.current = defaults
+    setConfig(defaults)
+  }, [])
+
   const toggleInterval = useCallback((semitones: number) => {
     if (phaseRef.current === 'running') return
     setSelectedIntervals((previous) =>
@@ -598,6 +602,16 @@ export function useSession(): UseSession {
         ? previous.filter((value) => value !== semitones)
         : [...previous, semitones].sort((a, b) => a - b),
     )
+  }, [])
+
+  const selectAllIntervals = useCallback(() => {
+    if (phaseRef.current === 'running') return
+    setSelectedIntervals([...ALL_SEMITONES])
+  }, [])
+
+  const clearIntervals = useCallback(() => {
+    if (phaseRef.current === 'running') return
+    setSelectedIntervals([0, 7])
   }, [])
 
   const toggleTriadCombination = useCallback(
@@ -653,6 +667,9 @@ export function useSession(): UseSession {
   }, [])
 
   const goToSetup = useCallback(() => {
+    const defaults = getSessionDefaults()
+    configRef.current = defaults
+    setConfig(defaults)
     resetToSetup('[Session] Powrót do ustawień.')
   }, [resetToSetup])
 
@@ -733,7 +750,10 @@ export function useSession(): UseSession {
     setCount,
     setSeconds,
     setDirection,
+    applyDefaults,
     toggleInterval,
+    selectAllIntervals,
+    clearIntervals,
     toggleTriadCombination,
     toggleTriadType,
     toggleChordCombination,

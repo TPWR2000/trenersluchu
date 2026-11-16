@@ -2,15 +2,12 @@ import {PLAY_MODE_GLYPHS, PLAY_MODE_LABELS} from '../data/directions'
 import type {SessionConfig, TaskResult} from '../types'
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowRotateRight, faVolumeHigh} from '@fortawesome/free-solid-svg-icons'
-import {ThemeToggle} from './ThemeToggle'
 
 interface ResultsAreaProps {
     config: SessionConfig
     correct: number
     wrong: number
     history: TaskResult[]
-    isDark: boolean
-    onToggleTheme: () => void
     onNewSession: () => void
     onReplayTask: (task: TaskResult) => void
 }
@@ -20,8 +17,6 @@ export function ResultsArea({
                                 correct,
                                 wrong,
                                 history,
-                                isDark,
-                                onToggleTheme,
                                 onNewSession,
                                 onReplayTask,
                             }: ResultsAreaProps) {
@@ -42,7 +37,6 @@ export function ResultsArea({
                         {config.mode === 'count' ? 'Koniec sesji' : `Sesja ${config.seconds}s`}
                     </h1>
                 </div>
-                <ThemeToggle isDark={isDark} onToggle={onToggleTheme}/>
             </header>
 
             <div
@@ -102,7 +96,7 @@ export function ResultsArea({
                                             Twoja odpowiedź: {task.userAnswer} <span aria-hidden="true">✕</span>
                                         </p>
                                         <p className="truncate text-xs text-mt-success">
-                                            Poprawna: {task.correctAnswer} <span aria-hidden="true">✓</span>
+                                            Poprawna: {task.correctAnswer}
                                         </p>
                                     </>
                                 )}

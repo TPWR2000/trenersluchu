@@ -1,5 +1,5 @@
 import type {SamplesStatus} from '../audio/engine'
-import {SEVENTH_CHORDS, chordInversionsFor, chordKey, chordPool} from '../data/chords'
+import {chordInversionsFor, chordKey, chordPool, SEVENTH_CHORDS} from '../data/chords'
 import type {SeventhChordInversion, SeventhChordType} from '../types'
 import {StartControls} from './StartControls'
 
@@ -34,7 +34,7 @@ export function ChordSettings({
         <section className="flex flex-col gap-5">
             <div>
                 <p className="font-mono text-xs uppercase tracking-[0.2em] text-mt-accent">03 / zakres</p>
-                <h1 className="mt-1 text-2xl font-bold tracking-tight text-mt-text">Wybierz akordy septymowe</h1>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-mt-text">Wybierz czterodźwięki</h1>
             </div>
 
             <div className="flex flex-col gap-3">
