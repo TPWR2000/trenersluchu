@@ -14,6 +14,8 @@ export type TriadType = 'maj' | 'min' | 'dim' | 'aug'
 
 export type TriadInversion = 'root' | 'first' | 'second'
 
+export type NameDisplayMode = 'words' | 'symbols' | 'both'
+
 export type SeventhChordType = 'maj7' | 'm7' | 'dom7' | 'dim7' | 'm7b5'
 
 export type SeventhChordInversion = 'root' | 'first' | 'second' | 'third'
@@ -65,6 +67,15 @@ export interface AnswerOption {
   key: string
   short: string
   name: string
+  triad?: {
+    type: TriadType
+    inversion: TriadInversion
+  }
+  chord?: {
+    type: SeventhChordType
+    inversion: SeventhChordInversion
+  }
+  interval?: number
 }
 
 export interface ReplayPayload {
@@ -84,4 +95,16 @@ export interface TaskResult {
   isCorrect: boolean
   elapsedMs: number
   replay: ReplayPayload
+  triad?: {
+    correct: { type: TriadType; inversion: TriadInversion }
+    chosen: { type: TriadType; inversion: TriadInversion } | null
+  }
+  chord?: {
+    correct: { type: SeventhChordType; inversion: SeventhChordInversion }
+    chosen: { type: SeventhChordType; inversion: SeventhChordInversion } | null
+  }
+  interval?: {
+    correct: number
+    chosen: number | null
+  }
 }

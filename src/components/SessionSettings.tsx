@@ -1,10 +1,13 @@
 import type {SamplesStatus} from '../audio/engine'
 import {INTERVALS} from '../data/intervals'
+import type {NameDisplayMode} from '../types'
+import {IntervalName} from './IntervalName'
 import {StartControls} from './StartControls'
 
 interface SessionSettingsProps {
     selected: number[]
     samplesStatus: SamplesStatus
+    nameMode: NameDisplayMode
     onToggle: (semitones: number) => void
     onSelectAll: () => void
     onClear: () => void
@@ -14,6 +17,7 @@ interface SessionSettingsProps {
 export function SessionSettings({
                                     selected,
                                     samplesStatus,
+                                    nameMode,
                                     onToggle,
                                     onSelectAll,
                                     onClear,
@@ -66,8 +70,11 @@ export function SessionSettings({
                                     : 'text-mt-sub hover:border-mt-sub hover:text-mt-text',
                             ].join(' ')}
                         >
-                            <span className="font-mono text-lg font-bold leading-none">{interval.short}</span>
-                            <span className="text-[11px] leading-tight">{interval.name}</span>
+                            <IntervalName
+                                symbol={interval.short}
+                                name={interval.name}
+                                mode={nameMode}
+                            />
                             <span
                                 className="font-mono text-[10px] leading-none opacity-60">{interval.semitones} półtonów</span>
                         </button>

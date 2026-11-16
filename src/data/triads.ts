@@ -1,4 +1,4 @@
-import type { TriadInversion, TriadType } from '../types'
+import type {NameDisplayMode, TriadInversion, TriadType} from '../types'
 
 export interface TriadTypeOption {
   value: TriadType
@@ -87,6 +87,37 @@ export function triadMidiNotes(
 
 export function triadLabel(type: TriadType, inversion: TriadInversion): string {
   return `${TRIAD_TYPE_BY_VALUE[type].name} · ${TRIAD_INVERSION_BY_VALUE[inversion].name}`
+}
+
+export function triadSymbol(type: TriadType): string {
+  switch (type) {
+    case 'maj':
+      return '+'
+    case 'min':
+      return 'o'
+    case 'dim':
+      return '>'
+    case 'aug':
+      return '<'
+  }
+}
+
+export function triadFigure(inversion: TriadInversion): '3' | '5' | null {
+  if (inversion === 'first') return '3'
+  if (inversion === 'second') return '5'
+  return null
+}
+
+export function triadName(
+  type: TriadType,
+  inversion: TriadInversion,
+  mode: NameDisplayMode,
+): string {
+  if (mode === 'words') return triadLabel(type, inversion)
+  const figure = triadFigure(inversion)
+  const symbol = triadSymbol(type)
+  const badge = figure ? `${symbol} ${figure}` : symbol
+  return mode === 'both' ? `${badge} · ${triadLabel(type, inversion)}` : badge
 }
 
 export function triadShortLabel(type: TriadType, inversion: TriadInversion): string {

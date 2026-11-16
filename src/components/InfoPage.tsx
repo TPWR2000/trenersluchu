@@ -48,12 +48,25 @@ export function InfoPage() {
                         </div>
                     </dl>
                 </article>
+                {/*<article className={infoCardClass}>*/}
+                {/*    <h2 className="font-semibold text-mt-text">Technologia</h2>*/}
+                {/*    <p className="mt-2 text-sm leading-6 text-mt-sub">*/}
+                {/*        Wersja 0.0.0 · React + TypeScript · Tone.js. Brzmienie fortepianu zapewniają lokalne sample*/}
+                {/*        Salamander Grand Piano.*/}
+                {/*    </p>*/}
+                {/*</article>*/}
                 <article className={infoCardClass}>
-                    <h2 className="font-semibold text-mt-text">Technologia</h2>
+                    <h2 className="font-semibold text-mt-text">Kontakt</h2>
                     <p className="mt-2 text-sm leading-6 text-mt-sub">
-                        Wersja 0.0.0 · React + TypeScript · Tone.js. Brzmienie fortepianu zapewniają lokalne sample
-                        Salamander Grand Piano.
+                        Sugestie dotyczące rozwoju aplikacji oraz zgłoszenia błędów zauważonych na stronie możesz
+                        przesyłać na adres:
                     </p>
+                    <a
+                        href="mailto:trenersluchu@proton.me"
+                        className="mt-2 inline-block break-all text-sm font-medium text-mt-accent underline decoration-mt-accent/50 underline-offset-4 transition-colors hover:text-mt-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mt-accent"
+                    >
+                        trenersluchu@proton.me
+                    </a>
                 </article>
             </div>
         </section>

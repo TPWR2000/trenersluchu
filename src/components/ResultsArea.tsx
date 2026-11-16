@@ -1,13 +1,18 @@
 import {PLAY_MODE_GLYPHS, PLAY_MODE_LABELS} from '../data/directions'
-import type {SessionConfig, TaskResult} from '../types'
+import type {NameDisplayMode, SessionConfig, TaskResult} from '../types'
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowRotateRight, faVolumeHigh} from '@fortawesome/free-solid-svg-icons'
+import {TriadName} from './TriadName'
+import {ChordName} from './ChordName'
+import {IntervalName} from './IntervalName'
+import {INTERVAL_BY_SEMITONES} from '../data/intervals'
 
 interface ResultsAreaProps {
     config: SessionConfig
     correct: number
     wrong: number
     history: TaskResult[]
+    nameDisplayMode: NameDisplayMode
     onNewSession: () => void
     onReplayTask: (task: TaskResult) => void
 }
@@ -17,6 +22,7 @@ export function ResultsArea({
                                 correct,
                                 wrong,
                                 history,
+                                nameDisplayMode,
                                 onNewSession,
                                 onReplayTask,
                             }: ResultsAreaProps) {
@@ -88,15 +94,74 @@ export function ResultsArea({
                             <div className="min-w-0 flex-1">
                                 {task.isCorrect ? (
                                     <p className="truncate text-sm text-mt-success">
-                                        Twoja odpowiedź: {task.userAnswer} <span aria-hidden="true">✓</span>
+                                        Twoja odpowiedź:{' '}
+                                        {task.triad ? (
+                                            <TriadName
+                                                type={task.triad.correct.type}
+                                                inversion={task.triad.correct.inversion}
+                                                mode={nameDisplayMode}
+                                            />
+                                        ) : task.chord ? (
+                                            <ChordName
+                                                type={task.chord.correct.type}
+                                                inversion={task.chord.correct.inversion}
+                                                mode={nameDisplayMode}
+                                            />
+                                        ) : task.interval ? (
+                                            <IntervalName
+                                                symbol={INTERVAL_BY_SEMITONES[task.interval.correct]?.short ?? ''}
+                                                name={INTERVAL_BY_SEMITONES[task.interval.correct]?.name ?? task.userAnswer}
+                                                mode={nameDisplayMode}
+                                            />
+                                        ) : task.userAnswer}{' '}
+                                        <span aria-hidden="true">✓</span>
                                     </p>
                                 ) : (
                                     <>
                                         <p className="truncate text-sm text-mt-error">
-                                            Twoja odpowiedź: {task.userAnswer} <span aria-hidden="true">✕</span>
+                                            Twoja odpowiedź:{' '}
+                                            {task.triad?.chosen ? (
+                                                <TriadName
+                                                    type={task.triad.chosen.type}
+                                                    inversion={task.triad.chosen.inversion}
+                                                    mode={nameDisplayMode}
+                                                />
+                                            ) : task.chord?.chosen ? (
+                                                <ChordName
+                                                    type={task.chord.chosen.type}
+                                                    inversion={task.chord.chosen.inversion}
+                                                    mode={nameDisplayMode}
+                                                />
+                                            ) : task.interval ? (
+                                                <IntervalName
+                                                    symbol={task.interval.chosen === null ? '' : INTERVAL_BY_SEMITONES[task.interval.chosen]?.short ?? ''}
+                                                    name={task.interval.chosen === null ? task.userAnswer : INTERVAL_BY_SEMITONES[task.interval.chosen]?.name ?? task.userAnswer}
+                                                    mode={nameDisplayMode}
+                                                />
+                                            ) : task.userAnswer}{' '}
+                                            <span aria-hidden="true">✕</span>
                                         </p>
                                         <p className="truncate text-xs text-mt-success">
-                                            Poprawna: {task.correctAnswer}
+                                            Poprawna:{' '}
+                                            {task.triad ? (
+                                                <TriadName
+                                                    type={task.triad.correct.type}
+                                                    inversion={task.triad.correct.inversion}
+                                                    mode={nameDisplayMode}
+                                                />
+                                            ) : task.chord ? (
+                                                <ChordName
+                                                    type={task.chord.correct.type}
+                                                    inversion={task.chord.correct.inversion}
+                                                    mode={nameDisplayMode}
+                                                />
+                                            ) : task.interval ? (
+                                                <IntervalName
+                                                    symbol={INTERVAL_BY_SEMITONES[task.interval.correct]?.short ?? ''}
+                                                    name={INTERVAL_BY_SEMITONES[task.interval.correct]?.name ?? task.correctAnswer}
+                                                    mode={nameDisplayMode}
+                                                />
+                                            ) : task.correctAnswer}
                                         </p>
                                     </>
                                 )}

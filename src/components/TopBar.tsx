@@ -85,7 +85,7 @@ export function TopBar({
                     <div>
                         <p className="text-lg font-bold tracking-tight text-mt-text">trener słuchu</p>
                         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mt-sub">
-                            EAR TRAINER · v1.0
+                            EAR TRAINER · v0.0.67 alfa
                         </p>
                     </div>
                 </div>

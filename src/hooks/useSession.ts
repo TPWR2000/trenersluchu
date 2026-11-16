@@ -25,6 +25,8 @@ import {
   ALL_CHORD_COMBINATIONS,
   CHORD_INVERSION_BY_VALUE,
   SEVENTH_CHORD_BY_VALUE,
+  chordName,
+  chordBadgeLabel,
   chordInversionsFor,
   chordKey,
   chordLabel,
@@ -36,20 +38,25 @@ import {
 } from '../data/chords'
 import {
   ALL_TRIAD_COMBINATIONS,
+  TRIAD_INVERSION_BY_VALUE,
+  TRIAD_TYPE_BY_VALUE,
   isTriadInversionAllowed,
   parseTriadKey,
   triadInversionsFor,
+  triadName,
+  triadFigure,
+  triadSymbol,
   triadKey,
   triadLabel,
   triadMidiNotes,
   triadPool,
-  triadShortLabel,
 } from '../data/triads'
 import type {
   AnswerOption,
   Category,
   DirectionSource,
   Feedback,
+  NameDisplayMode,
   Phase,
   PlayDirection,
   PlayMode,
@@ -75,7 +82,6 @@ interface ResolvedPlay {
   playMode: PlayMode
   source: DirectionSource
 }
-
 function directionToPlayMode(direction: PlayDirection, source: DirectionSource): ResolvedPlay {
   if (source === 'time') {
     return { playMode: 'harmonic', source }
@@ -99,14 +105,23 @@ function intervalNotes(question: Extract<Question, { category: 'intervals' }>): 
   return [question.rootMidi, question.rootMidi + question.semitones]
 }
 
-function questionName(question: Question): string {
+function nameModeLabel(mode: NameDisplayMode): string {
+  if (mode === 'words') return 'słownie'
+  if (mode === 'symbols') return 'same oznaczenia'
+  return 'oznaczenia z nazwą słowną'
+}
+
+function questionName(question: Question, nameMode: NameDisplayMode): string {
   if (question.category === 'intervals') {
-    return INTERVAL_BY_SEMITONES[question.semitones]?.name ?? 'Nieznany interwał'
+    const interval = INTERVAL_BY_SEMITONES[question.semitones]
+    if (!interval) return 'Nieznany interwał'
+    if (nameMode === 'words') return interval.name
+    return nameMode === 'symbols' ? interval.short : `${interval.short} · ${interval.name}`
   }
   if (question.category === 'triads') {
-    return triadLabel(question.triadType, question.inversion)
+    return triadName(question.triadType, question.inversion, nameMode)
   }
-  return chordLabel(question.chordType, question.inversion)
+  return chordName(question.chordType, question.inversion, nameMode)
 }
 
 function questionNotes(question: Question): number[] {
@@ -119,18 +134,48 @@ function questionKey(question: Question): string {
   return chordKey(question.chordType, question.inversion)
 }
 
-function logNewQuestion(question: Question, rootMidi: number, play: ResolvedPlay): void {
+function logTriadDetails(question: Extract<Question, { category: 'triads' }>, nameMode: NameDisplayMode, action: string): void {
+  const inversion = TRIAD_INVERSION_BY_VALUE[question.inversion]
+  const figure = triadFigure(question.inversion)
+  const symbol = triadSymbol(question.triadType)
+  const usedSymbol = figure ? `${figure} nad ${symbol}` : symbol
+  console.log(
+    `[AudioEngine - Trójdźwięk] ${action} | Akord: ${TRIAD_TYPE_BY_VALUE[question.triadType].name} | ` +
+      `Przewrót: ${inversion.name} | Tryb nazw: ${nameModeLabel(nameMode)} | ` +
+      `Użyty symbol: ${usedSymbol} | Nuty: ${question.notes.map(midiToNote).join(', ')}`,
+  )
+}
+
+function logChordDetails(
+  question: Extract<Question, { category: 'chords' }>,
+  nameMode: NameDisplayMode,
+  action: string,
+): void {
+  const chord = SEVENTH_CHORD_BY_VALUE[question.chordType]
+  const inversion = CHORD_INVERSION_BY_VALUE[question.inversion]
+  console.log(
+    `[AudioEngine - Czterodźwięk] ${action} | Typ: ${chord.name} | ` +
+      `Przewrót: ${inversion.name} | Tryb nazw: ${nameModeLabel(nameMode)} | ` +
+      `Znaczek: ${chordBadgeLabel(question.chordType, question.inversion)} | ` +
+      `Nuty: ${question.notes.map(midiToNote).join(', ')}`,
+  )
+}
+
+function logNewQuestion(
+  question: Question,
+  rootMidi: number,
+  play: ResolvedPlay,
+  triadNameMode: NameDisplayMode,
+): void {
   const notes = questionNotes(question)
+  if (question.category === 'triads') {
+    logTriadDetails(question, triadNameMode, 'Generowanie zadania')
+  }
   if (question.category === 'chords') {
-    const chord = SEVENTH_CHORD_BY_VALUE[question.chordType]
-    const inversion = CHORD_INVERSION_BY_VALUE[question.inversion]
-    console.log(
-      `[AudioEngine - Septymowy] Typ: ${chord.short} | Przewrót: ${inversion.short} | ` +
-        `Nuty: ${notes.map(midiToNote).join(', ')}`,
-    )
+    logChordDetails(question, triadNameMode, 'Generowanie zadania')
   }
   console.log(
-    `[Session] Nowe pytanie — ${questionName(question)}, korzeń MIDI ${rootMidi}, ` +
+    `[Session] Nowe pytanie — ${questionName(question, triadNameMode)}, korzeń MIDI ${rootMidi}, ` +
       `nuty: ${notes.map(midiToNote).join(', ')} (MIDI: ${notes.join(', ')}), ` +
       `kierunek: ${PLAY_MODE_LABELS[play.playMode]} (${DIRECTION_SOURCE_LABELS[play.source]}), ` +
       'tryb odtwarzania zastosowany.',
@@ -142,10 +187,11 @@ function buildTaskResult(
   question: Question,
   chosenKey: string,
   elapsedMs: number,
+  triadNameMode: NameDisplayMode,
 ): TaskResult {
   const notes = questionNotes(question).sort((a, b) => a - b)
   const notesToPlay = notes.map(midiToNote)
-  const correctAnswer = questionName(question)
+  const correctAnswer = questionName(question, triadNameMode)
 
   if (question.category === 'intervals') {
     const chosen = parseIntervalKey(chosenKey)
@@ -154,7 +200,10 @@ function buildTaskResult(
       category: 'intervals',
       playMode: question.playMode,
       notesToPlay,
-      userAnswer: (chosen !== null && INTERVAL_BY_SEMITONES[chosen]?.name) || 'Nieznany interwał',
+      userAnswer:
+        chosen !== null && INTERVAL_BY_SEMITONES[chosen]
+          ? questionName({ ...question, semitones: chosen }, triadNameMode)
+          : 'Nieznany interwał',
       correctAnswer,
       isCorrect: chosen === question.semitones,
       elapsedMs,
@@ -164,6 +213,7 @@ function buildTaskResult(
         playMode: question.playMode,
         directionSource: question.directionSource,
       },
+      interval: {correct: question.semitones, chosen},
     }
   }
 
@@ -174,7 +224,7 @@ function buildTaskResult(
       category: 'triads',
       playMode: question.playMode,
       notesToPlay,
-      userAnswer: chosen ? triadLabel(chosen.type, chosen.inversion) : 'Nieznany trójdźwięk',
+      userAnswer: chosen ? triadName(chosen.type, chosen.inversion, triadNameMode) : 'Nieznany trójdźwięk',
       correctAnswer,
       isCorrect: chosen?.type === question.triadType && chosen?.inversion === question.inversion,
       elapsedMs,
@@ -183,6 +233,10 @@ function buildTaskResult(
         name: correctAnswer,
         playMode: question.playMode,
         directionSource: question.directionSource,
+      },
+      triad: {
+        correct: {type: question.triadType, inversion: question.inversion},
+        chosen,
       },
     }
   }
@@ -194,8 +248,8 @@ function buildTaskResult(
     playMode: question.playMode,
     notesToPlay,
     userAnswer: chosen
-      ? chordLabel(chosen.type, chosen.inversion)
-      : 'Nieznany akord septymowy',
+    ? chordName(chosen.type, chosen.inversion, triadNameMode)
+      : 'Nieznany czterodźwięk',
     correctAnswer,
     isCorrect:
       chosen?.type === question.chordType && chosen?.inversion === question.inversion,
@@ -205,6 +259,10 @@ function buildTaskResult(
       name: correctAnswer,
       playMode: question.playMode,
       directionSource: question.directionSource,
+    },
+    chord: {
+      correct: {type: question.chordType, inversion: question.inversion},
+      chosen,
     },
   }
 }
@@ -225,6 +283,7 @@ export interface UseSession {
   timeLeft: number
   samplesStatus: SamplesStatus
   history: TaskResult[]
+  triadNameMode: NameDisplayMode
   canStart: boolean
   setCategory: (category: Category) => void
   setCount: (count: number) => void
@@ -247,7 +306,7 @@ export interface UseSession {
   goToSetup: () => void
 }
 
-export function useSession(): UseSession {
+export function useSession(triadNameMode: NameDisplayMode): UseSession {
   const [phase, setPhase] = useState<Phase>('setup')
   const [config, setConfig] = useState<SessionConfig>(getSessionDefaults)
   const [selectedIntervals, setSelectedIntervals] = useState<number[]>([...ALL_SEMITONES])
@@ -343,13 +402,19 @@ export function useSession(): UseSession {
   )
 
   const playQuestion = useCallback((next: Question) => {
+    if (next.category === 'triads') {
+      logTriadDetails(next, triadNameMode, 'Odtwarzanie zadania')
+    }
+    if (next.category === 'chords') {
+      logChordDetails(next, triadNameMode, 'Odtwarzanie zadania')
+    }
     playNotes({
       notes: questionNotes(next),
-      name: questionName(next),
+      name: questionName(next, triadNameMode),
       playMode: next.playMode,
       directionSource: next.directionSource,
     })
-  }, [])
+  }, [triadNameMode])
 
   const pickQuestion = useCallback(() => {
     const cfg = configRef.current
@@ -375,7 +440,7 @@ export function useSession(): UseSession {
         playMode: play.playMode,
         directionSource: play.source,
       }
-      logNewQuestion(next, rootMidi, play)
+      logNewQuestion(next, rootMidi, play, triadNameMode)
       startedAtRef.current = performance.now()
       questionRef.current = next
       setQuestion(next)
@@ -409,7 +474,7 @@ export function useSession(): UseSession {
         playMode: play.playMode,
         directionSource: play.source,
       }
-      logNewQuestion(next, rootMidi, play)
+      logNewQuestion(next, rootMidi, play, triadNameMode)
       startedAtRef.current = performance.now()
       questionRef.current = next
       setQuestion(next)
@@ -442,12 +507,12 @@ export function useSession(): UseSession {
       playMode: play.playMode,
       directionSource: play.source,
     }
-    logNewQuestion(next, rootMidi, play)
+    logNewQuestion(next, rootMidi, play, triadNameMode)
     startedAtRef.current = performance.now()
     questionRef.current = next
     setQuestion(next)
     playQuestion(next)
-  }, [playQuestion])
+  }, [playQuestion, triadNameMode])
 
   useEffect(() => {
     if (phase !== 'running' || config.mode !== 'time') return
@@ -523,7 +588,7 @@ export function useSession(): UseSession {
       }
       setFeedback({ chosen: key, correct: isCorrect })
 
-      const result = buildTaskResult(answeredRef.current, current, key, elapsedMs)
+      const result = buildTaskResult(answeredRef.current, current, key, elapsedMs, triadNameMode)
       setHistory((previous) => [...previous, result])
       console.log(
         `[Session] Zadanie #${result.taskId}: odpowiedź „${result.userAnswer}”, ` +
@@ -545,7 +610,7 @@ export function useSession(): UseSession {
         pickQuestion()
       }, FEEDBACK_MS)
     },
-    [finish, pickQuestion],
+    [finish, pickQuestion, triadNameMode],
   )
 
   const repeat = useCallback(() => {
@@ -562,6 +627,30 @@ export function useSession(): UseSession {
           `[Session] Odsłuchiwanie zadania #${task.taskId} (${task.replay.name}, ` +
             `tryb: ${PLAY_MODE_LABELS[task.replay.playMode]}).`,
         )
+        if (task.triad) {
+          const triadQuestion: Extract<Question, {category: 'triads'}> = {
+            category: 'triads',
+            rootMidi: task.replay.notes[0] ?? 0,
+            triadType: task.triad.correct.type,
+            inversion: task.triad.correct.inversion,
+            notes: task.replay.notes,
+            playMode: task.replay.playMode,
+            directionSource: task.replay.directionSource,
+          }
+          logTriadDetails(triadQuestion, triadNameMode, 'Odtwarzanie z podsumowania')
+        }
+        if (task.chord) {
+          const chordQuestion: Extract<Question, {category: 'chords'}> = {
+            category: 'chords',
+            rootMidi: task.replay.notes[0] ?? 0,
+            chordType: task.chord.correct.type,
+            inversion: task.chord.correct.inversion,
+            notes: task.replay.notes,
+            playMode: task.replay.playMode,
+            directionSource: task.replay.directionSource,
+          }
+          logChordDetails(chordQuestion, triadNameMode, 'Odtwarzanie z podsumowania')
+        }
         playNotes({
           notes: task.replay.notes,
           name: task.replay.name,
@@ -572,7 +661,7 @@ export function useSession(): UseSession {
       .catch((error: unknown) => {
         console.error('[Session] Nie udało się odtworzyć zadania:', error)
       })
-  }, [])
+  }, [triadNameMode])
 
   const setCategory = useCallback((category: Category) => {
     if (phaseRef.current === 'running') return
@@ -696,6 +785,7 @@ export function useSession(): UseSession {
           key: intervalKey(interval.semitones),
           short: interval.short,
           name: interval.name,
+          interval: interval.semitones,
         }),
       )
     }
@@ -707,8 +797,9 @@ export function useSession(): UseSession {
         return [
           {
             key,
-            short: triadShortLabel(parsed.type, parsed.inversion),
+            short: triadName(parsed.type, parsed.inversion, triadNameMode),
             name: triadLabel(parsed.type, parsed.inversion),
+            triad: parsed,
           },
         ]
       })
@@ -722,10 +813,11 @@ export function useSession(): UseSession {
           key,
           short: chordShortLabel(parsed.type, parsed.inversion),
           name: chordLabel(parsed.type, parsed.inversion),
+          chord: parsed,
         },
       ]
     })
-  }, [config.category, selectedIntervals, selectedTriads, selectedChords])
+  }, [config.category, selectedIntervals, selectedTriads, selectedChords, triadNameMode])
 
   const answered = correct + wrong
   const correctKey = question ? questionKey(question) : null
@@ -747,6 +839,7 @@ export function useSession(): UseSession {
     timeLeft,
     samplesStatus,
     history,
+    triadNameMode,
     canStart,
     setCategory,
     setCount,

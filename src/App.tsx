@@ -1,5 +1,5 @@
 import {useState} from 'react'
-import {setSequenceGap} from './audio/engine'
+import {getNameDisplayMode, saveNameDisplayMode} from './data/preferences'
 import {ChordSettings} from './components/ChordSettings'
 import {InfoPage} from './components/InfoPage'
 import {QuizArea} from './components/QuizArea'
@@ -12,7 +12,8 @@ import {useSession} from './hooks/useSession'
 import {useTheme} from './hooks/useTheme'
 
 function App() {
-    const session = useSession()
+    const [triadNameMode, setTriadNameMode] = useState(getNameDisplayMode)
+    const session = useSession(triadNameMode)
     const {isDark, toggleTheme} = useTheme()
     const [view, setView] = useState<AppView>('trainer')
 
@@ -29,6 +30,7 @@ function App() {
                     wrong={session.wrong}
                     answered={session.answered}
                     timeLeft={session.timeLeft}
+                    nameDisplayMode={triadNameMode}
                     isDark={isDark}
                     onToggleTheme={toggleTheme}
                     onAnswer={session.answer}
@@ -62,6 +64,7 @@ function App() {
                             <SessionSettings
                                 selected={session.selectedIntervals}
                                 samplesStatus={session.samplesStatus}
+                                nameMode={triadNameMode}
                                 onToggle={session.toggleInterval}
                                 onSelectAll={session.selectAllIntervals}
                                 onClear={session.clearIntervals}
@@ -72,6 +75,7 @@ function App() {
                             <TriadSettings
                                 selectedTriads={session.selectedTriads}
                                 samplesStatus={session.samplesStatus}
+                                nameMode={triadNameMode}
                                 onToggleCombination={session.toggleTriadCombination}
                                 onToggleType={session.toggleTriadType}
                                 onStart={session.start}
@@ -81,6 +85,7 @@ function App() {
                             <ChordSettings
                                 selectedChords={session.selectedChords}
                                 samplesStatus={session.samplesStatus}
+                                nameMode={triadNameMode}
                                 onToggleCombination={session.toggleChordCombination}
                                 onToggleType={session.toggleChordType}
                                 onStart={session.start}
@@ -95,14 +100,18 @@ function App() {
                         correct={session.correct}
                         wrong={session.wrong}
                         history={session.history}
+                        nameDisplayMode={triadNameMode}
                         onNewSession={session.goToSetup}
                         onReplayTask={session.replayTask}
                     />
                 )}
                 {view === 'settings' && (
                     <SettingsPage
-                        onApplyDefaults={session.applyDefaults}
-                        onSequenceGapChange={setSequenceGap}
+                        nameDisplayMode={triadNameMode}
+                        onNameDisplayModeChange={(mode) => {
+                            saveNameDisplayMode(mode)
+                            setTriadNameMode(mode)
+                        }}
                     />
                 )}
                 {view === 'info' && <InfoPage/>}

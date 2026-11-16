@@ -1,8 +1,11 @@
 import {useEffect} from 'react'
-import type {AnswerOption, Feedback, Question, SessionConfig} from '../types'
+import type {AnswerOption, Feedback, NameDisplayMode, Question, SessionConfig} from '../types'
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faVolumeHigh, faXmark} from '@fortawesome/free-solid-svg-icons'
 import {ThemeToggle} from './ThemeToggle'
+import {TriadName} from './TriadName'
+import {ChordName} from './ChordName'
+import {IntervalName} from './IntervalName'
 
 interface QuizAreaProps {
     config: SessionConfig
@@ -14,6 +17,7 @@ interface QuizAreaProps {
     wrong: number
     answered: number
     timeLeft: number
+    nameDisplayMode: NameDisplayMode
     isDark: boolean
     onToggleTheme: () => void
     onAnswer: (key: string) => void
@@ -31,6 +35,7 @@ export function QuizArea({
                              wrong,
                              answered,
                              timeLeft,
+                             nameDisplayMode,
                              isDark,
                              onToggleTheme,
                              onAnswer,
@@ -84,7 +89,9 @@ export function QuizArea({
         return 'border-mt-border text-mt-text hover:border-mt-accent hover:text-mt-accent active:bg-mt-accent/10'
     }
 
-    const gridCols = 'grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-2.5 lg:grid-cols-5 xl:grid-cols-6'
+    const gridCols = question?.category === 'chords'
+        ? 'grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-4'
+        : 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5'
 
     const replayDisabled = locked || !question
     const progress = isTimeMode
@@ -109,10 +116,13 @@ export function QuizArea({
                 </div>
 
                 <div className="flex items-center gap-3">
-          <span className="font-mono text-sm tabular-nums">
+          <span
+              className="font-mono text-sm tabular-nums"
+              aria-label={`${correct} poprawnych, ${wrong} błędnych, ${answered} odpowiedzi`}
+          >
             <span className="text-mt-success">{correct}</span>
             <span className="px-1 opacity-50">/</span>
-            <span className="text-mt-error">{wrong}</span>
+            <span className="text-mt-sub">{answered}</span>
           </span>
                     <ThemeToggle isDark={isDark} onToggle={onToggleTheme}/>
                     <button
@@ -174,15 +184,39 @@ export function QuizArea({
                         disabled={locked}
                         onClick={() => onAnswer(option.key)}
                         className={[
-                            'flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border border-mt-border bg-mt-sub-alt p-2 transition-all duration-200 outline-none hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-mt-accent',
+                            'flex min-h-24 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border border-mt-border bg-mt-sub-alt p-3 transition-all duration-200 outline-none hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-mt-accent sm:min-h-28',
                             locked ? 'cursor-not-allowed' : '',
                             answerClass(option.key),
                         ].join(' ')}
                     >
-                        <span className="font-mono text-base font-bold leading-none">{option.short}</span>
-                        <span className="text-center text-[10px] leading-tight text-mt-sub sm:text-xs">
-              {option.name}
-            </span>
+                        {option.triad ? (
+                            <TriadName
+                                type={option.triad.type}
+                                inversion={option.triad.inversion}
+                                mode={nameDisplayMode}
+                                className="text-base"
+                            />
+                        ) : option.chord ? (
+                            <ChordName
+                                type={option.chord.type}
+                                inversion={option.chord.inversion}
+                                mode={nameDisplayMode}
+                                className="text-base"
+                            />
+                        ) : option.interval !== undefined ? (
+                            <IntervalName
+                                symbol={option.short}
+                                name={option.name}
+                                mode={nameDisplayMode}
+                            />
+                        ) : (
+                            <>
+                                <span className="font-mono text-base font-bold leading-none">{option.short}</span>
+                                <span className="text-center text-[10px] leading-tight text-mt-sub sm:text-xs">
+                                    {option.name}
+                                </span>
+                            </>
+                        )}
                     </button>
                 ))}
             </div>

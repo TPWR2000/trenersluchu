@@ -1,7 +1,8 @@
-import type {Category, PlayDirection, SessionConfig, SessionMode} from '../types'
+import type {Category, NameDisplayMode, PlayDirection, SessionConfig, SessionMode} from '../types'
 
 const SESSION_DEFAULTS_KEY = 'ear-trainer-session-defaults'
 export const SEQUENCE_GAP_KEY = 'ear-trainer-sequence-gap'
+export const TRIAD_NAME_MODE_KEY = 'ear-trainer-triad-name-mode'
 
 export type SessionDefaults = Pick<
     SessionConfig,
@@ -14,6 +15,20 @@ export const DEFAULT_SESSION_PREFERENCES: SessionDefaults = {
     count: 10,
     seconds: 60,
     direction: 'random',
+}
+
+export function getNameDisplayMode(): NameDisplayMode {
+    const stored = window.localStorage.getItem(TRIAD_NAME_MODE_KEY)
+    if (stored === 'badges' || stored === 'full') {
+        const migrated = stored === 'badges' ? 'symbols' : 'words'
+        window.localStorage.setItem(TRIAD_NAME_MODE_KEY, migrated)
+        return migrated
+    }
+    return stored === 'symbols' || stored === 'both' || stored === 'words' ? stored : 'words'
+}
+
+export function saveNameDisplayMode(mode: NameDisplayMode): void {
+    window.localStorage.setItem(TRIAD_NAME_MODE_KEY, mode)
 }
 
 const categories: Category[] = ['intervals', 'triads', 'chords']

@@ -1,11 +1,13 @@
 import type {SamplesStatus} from '../audio/engine'
 import {chordInversionsFor, chordKey, chordPool, SEVENTH_CHORDS} from '../data/chords'
-import type {SeventhChordInversion, SeventhChordType} from '../types'
+import type {NameDisplayMode, SeventhChordInversion, SeventhChordType} from '../types'
+import {ChordName} from './ChordName'
 import {StartControls} from './StartControls'
 
 interface ChordSettingsProps {
     selectedChords: string[]
     samplesStatus: SamplesStatus
+    nameMode: NameDisplayMode
     onToggleCombination: (type: SeventhChordType, inversion: SeventhChordInversion) => void
     onToggleType: (type: SeventhChordType) => void
     onStart: () => void
@@ -14,6 +16,7 @@ interface ChordSettingsProps {
 export function ChordSettings({
                                   selectedChords,
                                   samplesStatus,
+                                  nameMode,
                                   onToggleCombination,
                                   onToggleType,
                                   onStart,
@@ -24,7 +27,7 @@ export function ChordSettings({
 
     const optionClass = (active: boolean) =>
         [
-            'flex min-h-14 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl border border-mt-border bg-mt-bg px-2 py-2 transition-all duration-200 outline-none hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-mt-accent',
+            'flex min-h-20 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border border-mt-border bg-mt-bg px-2 py-2 transition-all duration-200 outline-none hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-mt-accent',
             active
                 ? 'border-mt-accent bg-mt-accent/10 text-mt-accent shadow-lg shadow-brand-400/10'
                 : 'text-mt-sub hover:border-mt-sub hover:text-mt-text',
@@ -37,7 +40,7 @@ export function ChordSettings({
                 <h1 className="mt-1 text-2xl font-bold tracking-tight text-mt-text">Wybierz czterodźwięki</h1>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
                 {SEVENTH_CHORDS.map((chord) => {
                     const allowedInversions = chordInversionsFor(chord.value)
                     const activeCount = allowedInversions.filter((inversion) =>
@@ -50,7 +53,7 @@ export function ChordSettings({
                         <div
                             key={chord.value}
                             className={[
-                                'flex flex-col gap-3 rounded-xl border bg-mt-sub-alt p-4 transition-colors duration-150',
+                                'flex flex-col gap-2.5 rounded-xl border bg-mt-sub-alt p-3.5 transition-colors duration-150',
                                 typeActive ? 'border-mt-accent/50' : 'border-mt-border',
                             ].join(' ')}
                         >
@@ -61,15 +64,12 @@ export function ChordSettings({
                                     onClick={() => onToggleType(chord.value)}
                                     className="flex flex-1 touch-manipulation flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded text-left outline-none transition-colors duration-150 hover:text-mt-text"
                                 >
-                  <span
-                      className={[
-                          'text-lg font-bold leading-none',
-                          typeActive ? 'text-mt-accent' : 'text-mt-text',
-                      ].join(' ')}
-                  >
-                    {chord.short}
-                  </span>
-                                    <span className="text-sm text-mt-sub">{chord.name}</span>
+                                    <ChordName
+                                        type={chord.value}
+                                        inversion="root"
+                                        mode={nameMode}
+                                        className={typeActive ? 'text-mt-accent' : 'text-mt-text'}
+                                    />
                                     <span className="text-[10px] leading-none opacity-60">
                     {chord.intervals.join(' - ')}
                   </span>
@@ -98,10 +98,13 @@ export function ChordSettings({
                                             onClick={() => onToggleCombination(chord.value, inversion.value)}
                                             className={optionClass(active)}
                                         >
-                      <span className="text-sm font-bold leading-none">
-                        {chord.short} ({inversion.short})
+                      <span className="flex min-h-10 items-center justify-center text-base font-bold leading-none">
+                          <ChordName
+                              type={chord.value}
+                              inversion={inversion.value}
+                              mode={nameMode}
+                          />
                       </span>
-                                            <span className="text-[10px] leading-tight">{inversion.name}</span>
                                         </button>
                                     )
                                 })}

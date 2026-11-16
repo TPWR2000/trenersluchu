@@ -1,4 +1,4 @@
-import type { SeventhChordInversion, SeventhChordType } from '../types'
+import type {NameDisplayMode, SeventhChordInversion, SeventhChordType} from '../types'
 
 export interface SeventhChordOption {
   value: SeventhChordType
@@ -8,9 +8,9 @@ export interface SeventhChordOption {
 }
 
 export const SEVENTH_CHORDS: SeventhChordOption[] = [
-  { value: 'maj7', short: 'dur7', name: 'Durowy septymowy', intervals: [0, 4, 7, 11] },
+  { value: 'maj7', short: 'dur7', name: 'Durowy z septymą wielką', intervals: [0, 4, 7, 11] },
   { value: 'm7', short: 'moll7', name: 'Molowy septymowy', intervals: [0, 3, 7, 10] },
-  { value: 'dom7', short: 'D7', name: 'Dominanta septymowa', intervals: [0, 4, 7, 10] },
+  { value: 'dom7', short: 'D7', name: 'Durowy z septymą małą', intervals: [0, 4, 7, 10] },
   { value: 'm7b5', short: 'm7b5', name: 'Półzmniejszony septymowy', intervals: [0, 3, 6, 10] },
   { value: 'dim7', short: 'dim7', name: 'Zmniejszony septymowy', intervals: [0, 3, 6, 9] },
 ]
@@ -101,6 +101,50 @@ export function chordLabel(
   const chord = SEVENTH_CHORD_BY_VALUE[type]
   const inversionLabel = CHORD_INVERSION_BY_VALUE[inversion].name
   return `${chord.name} · ${inversionLabel}`
+}
+
+export function chordSymbol(type: SeventhChordType): '+' | 'o' | '>' {
+  switch (type) {
+    case 'maj7':
+    case 'dom7':
+      return '+'
+    case 'm7':
+      return 'o'
+    case 'm7b5':
+    case 'dim7':
+      return '>'
+  }
+}
+
+export function chordSeventh(type: SeventhChordType): string {
+  if (type === 'maj7') return '7<'
+  if (type === 'dim7') return '7>'
+  return '7'
+}
+
+export function chordFigure(type: SeventhChordType, inversion: SeventhChordInversion): string {
+  if (inversion === 'first') return '3'
+  if (inversion === 'second') return '5'
+  if (inversion === 'third') return chordSeventh(type)
+  return ''
+}
+
+export function chordBadgeLabel(type: SeventhChordType, inversion: SeventhChordInversion): string {
+  const symbol = chordSymbol(type)
+  const figure = chordFigure(type, inversion)
+  const seventh = inversion === 'third' ? '' : `^${chordSeventh(type)}`
+  return `${symbol}${seventh}${figure ? ` / ${figure}` : ''}`
+}
+
+export function chordName(
+  type: SeventhChordType,
+  inversion: SeventhChordInversion,
+  mode: NameDisplayMode,
+): string {
+  const label = chordLabel(type, inversion)
+  if (mode === 'words') return label
+  const badge = chordBadgeLabel(type, inversion)
+  return mode === 'both' ? `${badge} · ${label}` : badge
 }
 
 export function chordShortLabel(

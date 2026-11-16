@@ -1,11 +1,13 @@
 import type {SamplesStatus} from '../audio/engine'
 import {TRIAD_TYPES, triadInversionsFor, triadKey, triadPool} from '../data/triads'
-import type {TriadInversion, TriadType} from '../types'
+import type {NameDisplayMode, TriadInversion, TriadType} from '../types'
+import {TriadName} from './TriadName'
 import {StartControls} from './StartControls'
 
 interface TriadSettingsProps {
     selectedTriads: string[]
     samplesStatus: SamplesStatus
+    nameMode: NameDisplayMode
     onToggleCombination: (type: TriadType, inversion: TriadInversion) => void
     onToggleType: (type: TriadType) => void
     onStart: () => void
@@ -14,6 +16,7 @@ interface TriadSettingsProps {
 export function TriadSettings({
                                   selectedTriads,
                                   samplesStatus,
+                                  nameMode,
                                   onToggleCombination,
                                   onToggleType,
                                   onStart,
@@ -24,7 +27,7 @@ export function TriadSettings({
 
     const optionClass = (active: boolean) =>
         [
-            'flex min-h-14 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl border border-mt-border bg-mt-bg px-2 py-2 transition-all duration-200 outline-none hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-mt-accent',
+            'flex min-h-20 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border border-mt-border bg-mt-bg px-2 py-2 transition-all duration-200 outline-none hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-mt-accent',
             active
                 ? 'border-mt-accent bg-mt-accent/10 text-mt-accent shadow-lg shadow-brand-400/10'
                 : 'text-mt-sub hover:border-mt-sub hover:text-mt-text',
@@ -61,15 +64,16 @@ export function TriadSettings({
                                     onClick={() => onToggleType(type.value)}
                                     className="flex flex-1 touch-manipulation flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded text-left outline-none transition-colors duration-150 hover:text-mt-text"
                                 >
-                  <span
-                      className={[
-                          'text-lg font-bold leading-none',
-                          typeActive ? 'text-mt-accent' : 'text-mt-text',
-                      ].join(' ')}
-                  >
-                    {type.short}
-                  </span>
-                                    <span className="text-sm text-mt-sub">{type.name}</span>
+                  {nameMode === 'words' ? (
+                      <span className="text-sm text-mt-sub">{type.name}</span>
+                  ) : (
+                      <TriadName
+                          type={type.value}
+                          inversion="root"
+                          mode={nameMode}
+                          className={typeActive ? 'text-mt-accent' : 'text-mt-text'}
+                      />
+                  )}
                                     <span className="text-[10px] leading-none opacity-60">
                     {type.intervals.join(' - ')}
                   </span>
@@ -94,10 +98,17 @@ export function TriadSettings({
                                             onClick={() => onToggleCombination(type.value, inversion.value)}
                                             className={optionClass(active)}
                                         >
-                      <span className="text-sm font-bold leading-none">
-                        {type.short} ({inversion.short})
+                      <span className="flex min-h-10 items-center justify-center text-base font-bold leading-none">
+                          {nameMode === 'words' ? (
+                              <span>{type.name} · {inversion.name}</span>
+                          ) : (
+                              <TriadName
+                                  type={type.value}
+                                  inversion={inversion.value}
+                                  mode={nameMode}
+                              />
+                          )}
                       </span>
-                                            <span className="text-[10px] leading-tight">{inversion.name}</span>
                                         </button>
                                     )
                                 })}
