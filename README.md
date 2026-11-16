@@ -7,7 +7,7 @@ Nowoczesna, responsywna aplikacja internetowa do treningu słuchu muzycznego, st
 ## 🚀 Funkcje i Możliwości
 
 - **Czysty, minimalistyczny interfejs (Focus Mode):** Podczas trwania sesji ukrywane są wszystkie zbędne elementy, pozostawiając jedynie timer/licznik, przycisk odsłuchu oraz przyciski odpowiedzi.
-- **Naturalne brzmienie pianina:** Wykorzystanie profesjonalnych sampli fortepianowych (`Tone.Sampler`).
+- **Naturalne brzmienie pianina:** Wykorzystanie lokalnych sampli fortepianowych Salamander (`Tone.Sampler`).
 - **Elastyczne tryby sesji:**
     - **Ilościowy:** Sesje na 10, 20 lub 50 zadań.
     - **Czasowy:** Szybkie wyzwania na 15s, 30s lub 60s.
@@ -31,7 +31,7 @@ Nowoczesna, responsywna aplikacja internetowa do treningu słuchu muzycznego, st
 - **Frontend:** React + TypeScript
 - **Budowanie i dev-server:** Vite
 - **Stylizowanie:** Tailwind CSS
-- **Silnik Audio:** Tone.js (`Tone.Sampler` ze źródłem sampli Salamander Grand Piano)
+- **Silnik Audio:** Tone.js (`Tone.Sampler` z lokalnymi samplami Salamander Grand Piano w `public/audio/salamander/`)
 
 ---
 

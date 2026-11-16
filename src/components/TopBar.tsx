@@ -49,8 +49,8 @@ export function TopBar({
                            onSelectDirection,
                        }: TopBarProps) {
     const timeMode = config.mode === 'time'
-    const directionLocked = locked || timeMode
-    const activeDirection: PlayDirection = timeMode ? 'harmonic' : config.direction
+    const directionLocked = locked
+    const activeDirection = config.direction
 
     const chipClass = (active: boolean) =>
         [
@@ -163,9 +163,7 @@ export function TopBar({
                         ))}
                     </div>
                     <span className="text-xs text-mt-sub/80">
-            {timeMode
-                ? 'Tryb czasowy zawsze odtwarza dźwięki harmonicznie.'
-                : 'Losuj kierunek lub wybierz sposób odtwarzania.'}
+            Losuj kierunek lub wybierz sposób odtwarzania.
           </span>
                 </div>
             </section>

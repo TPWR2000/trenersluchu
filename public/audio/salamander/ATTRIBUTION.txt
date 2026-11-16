@@ -1,0 +1,4 @@
+Salamander Grand Piano samples by Alexander Holm.
+Source: https://github.com/Tonejs/audio/tree/master/salamander
+License: Creative Commons Attribution 3.0 (CC BY 3.0)
+License URL: https://creativecommons.org/licenses/by/3.0/

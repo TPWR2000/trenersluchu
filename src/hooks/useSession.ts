@@ -364,7 +364,7 @@ export function useSession(): UseSession {
       }
 
       const rootMidi = ROOT_MIN_MIDI + Math.floor(Math.random() * ROOT_MIDI_RANGE)
-      const play = directionToPlayMode(cfg.direction, cfg.mode === 'time' ? 'time' : 'chosen')
+      const play = directionToPlayMode(cfg.direction, 'chosen')
       const next: Question = {
         category: 'intervals',
         rootMidi,
@@ -395,7 +395,7 @@ export function useSession(): UseSession {
       if (!parsed) return
       const { type, inversion } = parsed
       const rootMidi = TRIAD_ROOT_MIN_MIDI + Math.floor(Math.random() * TRIAD_ROOT_MIDI_RANGE)
-      const play = directionToPlayMode(cfg.direction, cfg.mode === 'time' ? 'time' : 'chosen')
+      const play = directionToPlayMode(cfg.direction, 'chosen')
       const notes = triadMidiNotes(rootMidi, type, inversion)
       const next: Question = {
         category: 'triads',
@@ -428,7 +428,7 @@ export function useSession(): UseSession {
     if (!parsed) return
     const { type, inversion } = parsed
     const rootMidi = CHORD_ROOT_MIN_MIDI + Math.floor(Math.random() * CHORD_ROOT_MIDI_RANGE)
-    const play = directionToPlayMode(cfg.direction, cfg.mode === 'time' ? 'time' : 'chosen')
+    const play = directionToPlayMode(cfg.direction, 'chosen')
     const notes = chordMidiNotes(rootMidi, type, inversion)
     const next: Question = {
       category: 'chords',

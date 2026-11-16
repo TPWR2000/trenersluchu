@@ -14,7 +14,7 @@ export interface PlaybackRequest {
   directionSource: DirectionSource
 }
 
-const PIANO_BASE_URL = 'https://tonejs.github.io/audio/salamander/'
+const PIANO_BASE_URL = `${import.meta.env.BASE_URL}audio/salamander/`
 
 const PIANO_URLS = {
   A0: 'A0.mp3',
@@ -63,7 +63,7 @@ export function initSamples(): void {
   sampler = new Tone.Sampler({
     urls: PIANO_URLS,
     baseUrl: PIANO_BASE_URL,
-    volume: -6,
+    volume: +6,
     onload: () => {
       console.log('[AudioEngine] Pianino zostało pomyślnie załadowane.')
       setStatus('ready')
